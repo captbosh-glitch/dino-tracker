@@ -5,9 +5,10 @@ const RADIUS = 100, WIDE = 250;   // miles: the regional search, and the wider l
 // The non-dinosaur animals we count around each place, as PBDB taxon names.
 const XQUERY = {trilobite:'Trilobita', ammonite:'Ammonoidea', dunkleosteus:'Dunkleosteus', eurypterus:'Eurypterus', mosasaur:'Tylosaurus,Mosasaurus',
   elasmosaurus:'Elasmosaurus', xiphactinus:'Xiphactinus', cretoxyrhina:'Cretoxyrhina', pteranodon:'Pteranodon', archelon:'Archelon', otodus:'Otodus',
-  mammuthus:'Mammuthus', mammut:'Mammut', smilodon:'Smilodon', sloth:'Megalonyx,Eremotherium'};
+  mammuthus:'Mammuthus', mammut:'Mammut', smilodon:'Smilodon', sloth:'Megalonyx,Eremotherium',
+  dimetrodon:'Dimetrodon', edaphosaurus:'Edaphosaurus', eryops:'Eryops', diplocaulus:'Diplocaulus'};
 
-let currentX = null, SNAP = null, GEN = null, DATA = null, place = null, view = 'home', rng = [0, 2], sortBy = 'featured', current = null, loading = null;
+let currentX = null, SNAP = null, GEN = null, DATA = null, place = null, view = 'home', rng = [0, 4], sortBy = 'featured', current = null, loading = null;
 const app = document.getElementById('app');
 const store = {
   get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
@@ -100,11 +101,11 @@ function aggregate(recs){
 async function lookupLive(pl, signal){
   await loadGen();
   const dinos = mi => getJSON(`${API}/occs/list.json?base_name=Dinosauria^Aves&${box(pl.lat, pl.lng, mi)}&show=class,strat&limit=all`, signal).then(j => aggregate(j.records || []));
-  const count = q => getJSON(`${API}/occs/list.json?base_name=${q}&${box(pl.lat, pl.lng, RADIUS)}&limit=0&rowcount`, signal).then(j => j.records_found || 0);
-  const [near, counts] = await Promise.all([dinos(RADIUS), Promise.all(Object.values(XQUERY).map(count))]);
+  const others = q => getJSON(`${API}/occs/list.json?base_name=${q}&${box(pl.lat, pl.lng, RADIUS)}&limit=all`, signal).then(j => tally(j.records || []));
+  const [near, counts] = await Promise.all([dinos(RADIUS), Promise.all(Object.values(XQUERY).map(others))]);
   let rec = near, mi = RADIUS;
   if (!near.d.length) { const wide = await dinos(WIDE); if (wide.d.length) { rec = {d:wide.d, t:near.t}; mi = WIDE; } }
-  const x = Object.fromEntries(Object.keys(XQUERY).map((k,i) => [k, counts[i]]).filter(([,n]) => n));
+  const x = Object.fromEntries(Object.keys(XQUERY).map((k,i) => [k, counts[i]]).filter(([,v]) => v.n));
   return {...rec, x, mi, source:'live', at:Date.now()};
 }
 
@@ -128,7 +129,20 @@ async function lookup(pl, signal){
   return lookupSnapshot(pl);
 }
 
-const periodOf = ma => PERIODS.find(p => ma <= p.from && ma > p.to) || PERIODS[2];
+const periodOf = ma => PERIODS.find(p => ma <= p.from && ma > p.to) || PERIODS[3];
+// The geologic period of an age: "Late Cretaceous" inside the age of dinosaurs, "Ordovician" or "Pleistocene" outside it.
+function ageName(ma){
+  if (ma <= 251.9 && ma > 66) return subAge(ma);
+  if (ma > 538.8) return 'Precambrian';
+  for (let i = AGES.length - 1; i >= 0; i--) if (ma <= AGES[i][0]) return AGES[i][1];
+}
+const eraOfAge = a => /Triassic|Jurassic|Cretaceous/.test(a) ? PERIODS.find(p => a.endsWith(p.name)).id : AGES.findIndex(([, n]) => n === a) > 5 ? 'cen' : 'pal';
+// Count records by the period they come from, using the middle of each record's age range.
+function tally(recs){
+  const p = {};
+  for (const r of recs) { const m = (+r.eag + +r.lag) / 2; if (m >= 0) { const a = ageName(m); p[a] = (p[a] || 0) + 1; } }
+  return {n:recs.length, p};
+}
 function subAge(ma){ const p = periodOf(ma); return p.parts.find(([lim]) => ma > lim)[1] + ' ' + p.name; }
 const fmtMa = (a,b) => Math.round(a) === Math.round(b) ? `About ${Math.round(a)} million years ago` : `${Math.round(a)}–${Math.round(b)} million years ago`;
 
@@ -144,7 +158,14 @@ function shape(pl, L){
     const diet = grp === 'theropod' && OMNI.includes(fam) ? 'Omnivore' : GROUPS[grp][1];
     return {g, n, f, ea, la, grp, fam, att, sci: GUIDE[g]?.sci || ttl || '', per: per.id, sub: subAge(mid), diet};
   });
-  return {d, t:L.t, e:L.d.filter(r => isEgg(r[0])), x:L.x, near, dnear, wide:L.mi === WIDE, source:L.source, at:L.at,
+  // Non-dinosaurs: older saved results only have counts, so fall back to each animal's usual period.
+  const x = {};
+  for (const [k, v] of Object.entries(L.x || {})) {
+    if (!INSTEAD[k]) continue;
+    const ages = typeof v === 'number' ? [] : Object.entries(v.p).sort((a, b) => b[1] - a[1]);
+    x[k] = {n:typeof v === 'number' ? v : v.n, ages, tag:ages[0]?.[0] || INSTEAD[k].tag, per:ages[0] ? eraOfAge(ages[0][0]) : INSTEAD[k].at};
+  }
+  return {d, t:L.t, e:L.d.filter(r => isEgg(r[0])), x, near, dnear, wide:L.mi === WIDE, source:L.source, at:L.at,
     region: L.source === 'snapshot' ? `Across ${pl.state} · saved records` : isUS(pl) ? `${L.mi}-mile radius` : `${dist(pl, L.mi)} radius`};
 }
 const dinosFor = () => DATA;
@@ -250,10 +271,10 @@ function renderHome(){
       ${WORLD.map(([n, lat, lng]) => `<button class="chip" data-at="${lat},${lng}" data-name="${n}">${n}</button>`).join('')}</div></div>
   <section class="mapcard" aria-labelledby="map-h">
     <div class="mhead"><div><span class="eyebrow">Explore the map</span><h2 id="map-h">Pick any spot on Earth</h2></div>
-      <p>Each dot marks dinosaur fossils found there. Bigger dots, more finds. Tap anywhere to see who lived nearby, or look up a dinosaur to see everywhere it’s been found.</p></div>
-    <div class="dsearch"><label class="f" for="dq">Look up a dinosaur</label>
-      <div class="zipbox"><input class="zip" id="dq" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="dq-list" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="e.g. Tyrannosaurus" value="${mapDino || ''}">${ic('search')}
-        <ul class="dq-list" id="dq-list" role="listbox" aria-label="Dinosaurs" hidden></ul></div>
+      <p>Each dot marks dinosaur fossils found there. Bigger dots, more finds. Tap anywhere to see who lived nearby, or look up an animal to see everywhere it’s been found.</p></div>
+    <div class="dsearch"><label class="f" for="dq">Look up a dinosaur or other prehistoric animal</label>
+      <div class="zipbox"><input class="zip" id="dq" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="dq-list" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="e.g. Tyrannosaurus or Dimetrodon" value="${mapDino || ''}">${ic('search')}
+        <ul class="dq-list" id="dq-list" role="listbox" aria-label="Prehistoric animals" hidden></ul></div>
       <div class="resolved" id="dq-out" aria-live="polite"></div></div>
     <div class="dfound" id="dfound" aria-live="polite" hidden></div>
     <div class="map" id="map" aria-label="World map of dinosaur fossil finds"><div class="map-msg">Loading the map…</div></div>
@@ -330,10 +351,11 @@ function renderHome(){
 /* ---------- dinosaur search ---------- */
 // Every named dinosaur in the database, minus footprints and eggshell, which are named apart from the animals.
 let NAMES = null;
-const loadNames = () => loadGen().then(G => NAMES ||= Object.keys(G).filter(g => !G[g][4] && !/oolith|ovum$/i.test(g)).sort());
+const loadNames = () => loadGen().then(G => NAMES ||= [...Object.keys(G).filter(g => !G[g][4] && !/oolith|ovum$/i.test(g)), ...Object.keys(XNAMES)].sort());
+const kindOf = g => XNAMES[g] ? INSTEAD[XNAMES[g][0]].kind : GROUPS[GEN[g]?.[0]]?.[0] || 'Dinosaur';
 function matchNames(q){
   // Painted and well-known dinosaurs first, then the ones with the most fossil records.
-  const s = q.toLowerCase(), rank = g => (ART[g] ? -1e5 : GUIDE[g] ? -5e4 : 0) - (GEN[g][5] || 0);
+  const s = q.toLowerCase(), rank = g => (ART[g] ? -1e5 : GUIDE[g] || XNAMES[g] ? -5e4 : 0) - (GEN[g]?.[5] || 0);
   const pre = NAMES.filter(g => g.toLowerCase().startsWith(s)).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
   const mid = s.length > 2 ? NAMES.filter(g => !g.toLowerCase().startsWith(s) && g.toLowerCase().includes(s)) : [];
   const hits = [...pre, ...mid];
@@ -373,7 +395,7 @@ function dinoSearch(){
     if (!opts.length) return close();
     list.innerHTML = opts.map((g, j) => {
       const k = Math.max(0, g.toLowerCase().indexOf(v.toLowerCase())), i = g.toLowerCase().includes(v.toLowerCase()) ? v.length : 0;
-      return `<li role="option" id="dq-o${j}" data-g="${g}" aria-selected="false"><span class="nm">${g.slice(0, k)}<b>${g.slice(k, k + i)}</b>${g.slice(k + i)}</span><span>${GROUPS[GEN[g][0]]?.[0] || 'Dinosaur'}</span></li>`;
+      return `<li role="option" id="dq-o${j}" data-g="${g}" aria-selected="false"><span class="nm">${g.slice(0, k)}<b>${g.slice(k, k + i)}</b>${g.slice(k + i)}</span><span>${kindOf(g)}</span></li>`;
     }).join('');
     list.hidden = false; q.setAttribute('aria-expanded', 'true'); mark(-1);
   });
@@ -390,7 +412,7 @@ function dinoSearch(){
       await loadNames();
       const hit = NAMES.find(g => g.toLowerCase() === v.toLowerCase()) || (!list.hidden && opts[0]);
       if (hit) return pick(hit);
-      out.textContent = `We couldn’t find a dinosaur named “${clean(v)}”. Check the spelling, or try its genus, like Triceratops.`; out.classList.add('err');
+      out.textContent = `We couldn’t find an animal named “${clean(v)}”. Check the spelling, or try its genus, like Triceratops.`; out.classList.add('err');
     }
   });
   // mousedown, not click, so the pick lands before the input loses focus and the list closes
@@ -410,7 +432,8 @@ async function showDino(g){
   if (!g) { box.hidden = true; return; }
   box.hidden = false; box.className = 'dfound'; box.innerHTML = `<span class="dmsg">Finding every ${g} fossil…</span>`;
   let recs;
-  try { [recs] = await Promise.all([getJSON(`${API}/occs/list.json?base_name=${encodeURIComponent(g)}&show=coords,loc&vocab=pbdb&limit=all`).then(j => j.records || []), loadGen()]); }
+  const xk = XNAMES[g]?.[0];
+  try { [recs] = await Promise.all([getJSON(`${API}/occs/list.json?base_name=${encodeURIComponent(XNAMES[g]?.[1] || g)}&show=coords,loc&vocab=pbdb&limit=all`).then(j => j.records || []), loadGen()]); }
   catch { recs = null; }
   if (my !== dseq || !box.isConnected) return;
   const reset = '<button class="chip" id="dclear">Show all dinosaurs</button>';
@@ -428,18 +451,19 @@ async function showDino(g){
   for (const s of S) if (s.cc) cs[s.cc] = (cs[s.cc] || 0) + s.n;
   const top = Object.entries(cs).sort((a, b) => b[1] - a[1]).map(([c]) => countryOf(c));
   const ea = Math.max(...S.map(s => s.ea)), la = Math.min(...S.map(s => s.la)), n = S.reduce((a, s) => a + s.n, 0);
-  const [grp, fam] = GEN[g] || ['other', ''], x = {g, grp, fam, per:periodOf(Math.max(la, 66.1)).id};
-  const sil = !ART[g] && silFor(x);
-  const thumb = ART[g] ? `<img src="art/${ART[g]}.jpg" alt="">` : sil ? `<span class="shape" style="--m:url('art/sil/${sil[0]}.png')"></span>` : '';
+  const [grp, fam] = GEN[g] || ['other', ''], x = {g, grp, fam, per:xk ? INSTEAD[xk].at : periodOf(Math.max(la, 66.1)).id};
+  const paint = xk ? XART[xk] : ART[g], sil = !paint && (xk ? XSIL[xk] : silFor(x));
+  const thumb = paint ? `<img src="art/${paint}.jpg" alt="">` : sil ? `<span class="shape" style="--m:url('art/sil/${sil[0]}.png')"></span>` : '';
   // The field guide needs a place, so open it at the site with the most records.
-  const best = S.reduce((a, s) => s.n > a.n ? s : a), guide = `?at=${best.lat.toFixed(2)},${best.lng.toFixed(2)}&dino=${g}`;
+  const link = at => xk ? `?at=${at}&x=${xk}` : `?at=${at}&dino=${g}`;
+  const best = S.reduce((a, s) => s.n > a.n ? s : a), guide = link(`${best.lat.toFixed(2)},${best.lng.toFixed(2)}`);
   box.className = `dfound ${x.per}`;
-  box.innerHTML = `<a class="dlink" href="${guide}" data-nav aria-label="Open the ${g} field guide"><div class="dthumb${ART[g] ? ' painted' : ''}">${thumb}</div>
+  box.innerHTML = `<a class="dlink" href="${guide}" data-nav aria-label="Open the ${g} field guide"><div class="dthumb${paint ? ' painted' : ''}">${thumb}</div>
     <div class="dtext"><h3>${g} ${ic('arrow')}</h3>
-      <p>${GROUPS[grp]?.[0] || 'Dinosaur'}${fam ? ' · ' + fam : ''} · ${fmtMa(ea, la)}</p>
+      <p>${xk ? INSTEAD[xk].kind + ' · Not a dinosaur' : (GROUPS[grp]?.[0] || 'Dinosaur') + (fam ? ' · ' + fam : '')} · ${fmtMa(ea, la)}</p>
       <p>${n} fossil record${n > 1 ? 's' : ''} at ${S.length} site${S.length > 1 ? 's' : ''} · ${top.slice(0, 3).join(', ')}${top.length > 3 ? ` and ${top.length - 3} more ${top.length - 3 > 1 ? 'countries' : 'country'}` : ''}</p></div></a>
     <div class="dacts"><a class="chip primary" href="${guide}" data-nav>Field guide</a>${reset}</div>`;
-  FOUND = {g, S};
+  FOUND = {g, S, link};
   wireClear(); plotDino();
 }
 function wireClear(){
@@ -490,13 +514,13 @@ function plotDino(){
   SITES?.remove(); SITES = null;
   HOTS?.eachLayer(c => c.setStyle({fillOpacity:FOUND ? .14 : .42}));
   if (!FOUND) return;
-  const {g, S} = FOUND, small = MAP.getContainer().clientWidth < 500;
+  const {g, S, link} = FOUND, small = MAP.getContainer().clientWidth < 500;
   SITES = L.layerGroup(S.map(s => L.circleMarker([s.lat, s.lng], {radius:(small ? .8 : 1) * Math.min(12, 5 + Math.sqrt(s.n) * 1.2), color:'#fff', weight:2, fillColor:'#2f3a8f', fillOpacity:.92, bubblingMouseEvents:false})
     .bindPopup(() => {
       const where = [s.county, s.state, countryOf(s.cc)].filter((v, i, a) => v && a.indexOf(v) === i).join(', ') || coordLabel(s.lat, s.lng);
       const at = `${s.lat.toFixed(2)},${s.lng.toFixed(2)}`;
       return `<div class="pop"><b>${clean(where)}</b><span>${s.n} ${g} record${s.n > 1 ? 's' : ''} · ${fmtMa(s.ea, s.la).replace(' million years ago', ' Ma')}</span>
-        <a class="btn primary" href="?at=${at}&dino=${g}" data-nav>${ic('arrow')}Meet ${g} here</a>
+        <a class="btn primary" href="${link(at)}" data-nav>${ic('arrow')}Meet ${g} here</a>
         <a class="btn" href="?at=${at}" data-nav>See who lived nearby</a></div>`;
     }, {closeButton:false, className:'dt-pop', offset:[0, -4]}))).addTo(MAP);
   const b = L.latLngBounds(S.map(s => [s.lat, s.lng]));
@@ -508,7 +532,7 @@ function plotDino(){
 async function open(pl, opts = {}){
   loading?.abort();
   const ctl = loading = new AbortController();
-  place = pl; DATA = null; rng = [0, 2]; sortBy = 'featured';
+  place = pl; DATA = null; rng = [0, 4]; sortBy = 'featured';
   if (!opts.then) go('results', opts);
   try {
     const L = await lookup(pl, ctl.signal);
@@ -526,9 +550,8 @@ const inRange = id => { const i = PERIODS.findIndex(p => p.id === id); return i 
 
 /* ---------- results ---------- */
 function headlineFor(pl, data){
-  const xs = Object.keys(data.x);
-  const ice = xs.filter(k => INSTEAD[k]?.era === 'ice').length, oldSea = (data.x.trilobite || 0) + (data.x.dunkleosteus || 0) + (data.x.eurypterus || 0);
-  const crSea = xs.some(k => /^Cretaceous/.test(INSTEAD[k]?.tag || ''));
+  const xs = Object.keys(data.x), sum = per => xs.filter(k => data.x[k].per === per).reduce((a, k) => a + data.x[k].n, 0);
+  const crSea = xs.some(k => data.x[k].per === 'cre'), sail = ['dimetrodon', 'edaphosaurus'].find(k => data.x[k]);
   if (pl.headline) return pl.headline;
   if (pl.state === 'Kansas' && crSea && data.d.length) return PLACES['67601'].headline;
   if (data.d.length && data.wide) return ['Dinosaurs, just down the road.', `No dinosaur fossils are recorded ${data.near}, but these turn up ${data.dnear}.`];
@@ -540,7 +563,8 @@ function headlineFor(pl, data){
   if (pl.sea && !xs.length && !data.t.length) return ['Nothing but open water.', `No fossils are recorded ${data.dnear}. The deep ocean floor is young rock, and few fossils are ever collected from it. Try a spot along a coastline.`];
   if (!xs.length && !data.t.length) return ['No dinosaurs on record here yet.', `The Paleobiology Database doesn’t list dinosaur fossils ${data.dnear}. Fossil records follow where paleontologists have searched and published, so many regions are still blank. That can change as new finds come in.`];
   if (data.t.length) return ['Only their footprints remain.', `No dinosaur bones have been recorded ${data.dnear}, but dinosaurs left tracks in the rocks nearby.`];
-  if (oldSea >= ice) return ['Before the dinosaurs, this was a sea.', `No dinosaur fossils have been recorded ${data.dnear}. Many of the rocks here are older than the dinosaurs. They formed on the floor of warm, shallow seas full of very different animals.`];
+  if (sail) return ['The sail-backs got here first.', `No dinosaur fossils have been recorded ${data.dnear}, but ${INSTEAD[sail].name} lived here more than 40 million years before the first dinosaur.`];
+  if (sum('pal') >= sum('cen')) return ['Before the dinosaurs, this was a sea.', `No dinosaur fossils have been recorded ${data.dnear}. Many of the rocks here are older than the dinosaurs. They formed on the floor of warm, shallow seas full of very different animals.`];
   return ['No dinosaurs here. Giants came later.', `No dinosaur fossils have been recorded ${data.dnear}. Many of the rocks here formed after the dinosaurs were gone, but the Ice Age left a remarkable record of its own.`];
 }
 
@@ -561,16 +585,27 @@ function renderLoading(pl, error){
   document.getElementById('retry')?.addEventListener('click', () => open(place, {history:false}));
 }
 
+// A non-dinosaur card. Its tag names the period its fossils here come from.
+function xcard(k, v, data){
+  const it = INSTEAD[k], s = XSIL[k];
+  const art = XART[k] ? `<div class="art"><span class="fm">Not a dinosaur</span><img src="art/${XART[k]}.jpg" alt="${it.name} illustration" loading="lazy"></div>`
+    : s ? `<div class="art sil ${v.per}"><span class="fm">Not a dinosaur</span><span class="shape" style="--m:url('art/sil/${s[0]}.png')" role="img" aria-label="${s[3] ? 'Silhouette of a related ' + s[3] : it.name + ' silhouette'}"></span><span class="note">${s[3] ? 'Related ' + s[3] : 'Silhouette'}</span></div>`
+    : `<div class="art pending"><span class="fm">Not a dinosaur</span><span class="ghost">${it.name}</span><span class="note">Illustration coming</span></div>`;
+  return `<button class="xcard ${v.per}" data-x="${k}">${art}<div class="xbody"><div class="row"><span class="tag ${v.per}">${v.tag}</span><span>${it.kind}</span></div><h3>${it.name}</h3><p>${it.text}</p><span class="n">${it.when} · ${v.n} record${v.n > 1 ? 's' : ''} ${data.near}</span></div></button>`;
+}
+const fmtAgo = ma => ma ? `${Math.round(ma)} million years ago` : 'Today';
+
 function renderResults(){
   const pl = place, data = DATA;
   if (!data || data.error) return renderLoading(pl, data?.error);
   const [h, sub] = headlineFor(pl, data);
-  const counts = Object.fromEntries(PERIODS.map(p => [p.id, data.d.filter(x => x.per === p.id).length]));
+  const xs = Object.entries(data.x).sort((a, b) => b[1].n - a[1].n);
+  const dn = id => data.d.filter(x => x.per === id).length, xn = id => xs.filter(([, v]) => v.per === id).length;
   const shown = sorted(data.d.filter(x => inRange(x.per)));
-  const active = PERIODS.filter(p => inRange(p.id));
-  const all = rng[0] === 0 && rng[1] === 2;
-  const xs = Object.entries(data.x).filter(([k]) => INSTEAD[k]).sort((a,b) => b[1]-a[1]);
-  const xcards = list => list.map(([k,n]) => { const it = INSTEAD[k]; return `<button class="xcard" data-x="${k}">${XART[k] ? `<div class="art"><img src="art/${XART[k]}.jpg" alt="${it.name} illustration" loading="lazy"></div>` : `<div class="art pending"><span class="ghost">${it.name}</span><span class="note">Illustration coming</span></div>`}<div class="xbody"><span class="tag ${it.era}">${it.tag}</span><h3>${it.name}</h3><p>${it.text}</p><span class="n">${it.when} · ${n} record${n>1?'s':''} ${data.near}</span></div></button>`; }).join('');
+  const active = PERIODS.filter(p => inRange(p.id)), last = PERIODS.length - 1;
+  const all = rng[0] === 0 && rng[1] === last;
+  const xin = xs.filter(([, v]) => inRange(v.per)), meso = ['tri', 'jur', 'cre'].some(inRange);
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const loc = placeLine(pl);
 
   let html = `
@@ -579,48 +614,74 @@ function renderResults(){
   <div class="res-head"><div><h1>${h}</h1><p>${sub}</p></div><span class="eyebrow">Regional field guide</span></div>
   <div class="source ${data.source}">${ic(data.source === 'live' ? 'book' : 'info')}${SOURCE[data.source]}</div>`;
 
-  if (data.d.length) {
+  if (data.d.length || xs.length) {
+    const label = p => p.era ? plural(xn(p.id), 'animal') : plural(dn(p.id), 'dinosaur') + (xn(p.id) ? ` · ${xn(p.id)} other${xn(p.id) > 1 ? 's' : ''}` : '');
+    const count = shown.length + xin.length;
     html += `
     <section class="panel" aria-label="Filter by period">
       <div class="panel-top"><div class="ptitle">${ic('sliders')}<b>Explore by period</b><span class="d-only">Drag the handles to travel through time</span><span class="m-only">Tap a period to focus on it</span></div>
         <button class="selall" id="selall" role="checkbox" aria-checked="${all}"><span class="box">${ic('check')}</span>Select all</button></div>
       <div class="range">
-        <div class="periods">${PERIODS.map(p => `<button class="per ${p.id}${counts[p.id] ? '' : ' nodata'}" data-per="${p.id}" aria-pressed="${inRange(p.id)}">
-          <span class="pm"><span class="pn">${p.name}</span><span class="pa">${Math.round(p.from)}–${Math.round(p.to)} Ma</span></span><span class="pc">${counts[p.id]} dinosaur${counts[p.id] === 1 ? '' : 's'}</span></button>`).join('')}</div>
-        <div class="track" id="track"><div class="fill" style="left:${rng[0]/3*100}%;right:${100-(rng[1]+1)/3*100}%"></div>
-          <button class="handle" data-h="0" style="left:${rng[0]/3*100}%" aria-label="Oldest period shown: ${PERIODS[rng[0]].name}"></button>
-          <button class="handle" data-h="1" style="left:${(rng[1]+1)/3*100}%" aria-label="Newest period shown: ${PERIODS[rng[1]].name}"></button></div>
-        <div class="scale"><span>${Math.round(PERIODS[rng[0]].from)} million years ago</span><span>${Math.round(PERIODS[rng[1]].to)} million years ago</span></div>
+        <div class="periods">
+          <span class="grp g-pal"><span class="long">Before the dinosaurs</span><span class="short">Before</span></span>
+          <span class="grp g-meso"><span class="long">The age of dinosaurs · Mesozoic</span><span class="short">Age of dinosaurs</span></span>
+          <span class="grp g-cen"><span class="long">After the dinosaurs</span><span class="short">After</span></span>
+          ${PERIODS.map(p => `<button class="per ${p.id}${(p.era ? xn(p.id) : dn(p.id) + xn(p.id)) ? '' : ' nodata'}" data-per="${p.id}" aria-pressed="${inRange(p.id)}">
+          <span class="pm"><span class="pn">${p.name}</span><span class="pa">${Math.round(p.from)} Ma–${p.to ? Math.round(p.to) + ' Ma' : 'today'}</span></span><span class="pc">${label(p)}</span></button>`).join('')}</div>
+        <div class="track" id="track"><div class="fill" style="left:${rng[0]/5*100}%;right:${100-(rng[1]+1)/5*100}%"></div>
+          <button class="handle" data-h="0" style="left:${rng[0]/5*100}%" aria-label="Oldest period shown: ${PERIODS[rng[0]].name}"></button>
+          <button class="handle" data-h="1" style="left:${(rng[1]+1)/5*100}%" aria-label="Newest period shown: ${PERIODS[rng[1]].name}"></button></div>
+        <div class="scale"><span>${fmtAgo(PERIODS[rng[0]].from)}</span><span>${fmtAgo(PERIODS[rng[1]].to)}</span></div>
       </div>
     </section>
-    <div class="bar"><div class="count">${shown.length} dinosaur${shown.length === 1 ? '' : 's'}<span>${all ? 'All periods selected' : active.map(p => p.name).join(' + ')}</span></div>
-      <label class="sort" for="sort">Sort by <select id="sort">${[['featured','Featured'],['records','Most records'],['oldest','Oldest first'],['newest','Newest first'],['az','A–Z']].map(([v,t]) => `<option value="${v}" ${v===sortBy?'selected':''}>${t}</option>`).join('')}</select></label></div>
-    ${shown.length ? `<div class="cards">${shown.map(x => card(x)).join('')}</div>` : `<div class="empty"><h3>No dinosaurs in this stretch of time</h3><p>Nothing is recorded here for the ${active.map(p => p.name).join(' or ')}. Drag the handles or tap Select all to widen the range.</p></div>`}
-    <div class="foot-note">${ic('info')}<span>A regional snapshot, not a fossil-site map. Records come from many sites and rock formations ${data.dnear}.</span></div>`;
+    <div class="bar"><div class="count">${data.d.length ? plural(shown.length, 'dinosaur') + (xin.length ? ` · ${plural(xin.length, 'other animal')}` : '') : plural(count, 'animal')}<span>${all ? 'All of deep time' : active.map(p => p.name).join(' + ')}</span></div>
+      ${shown.length ? `<label class="sort" for="sort">Sort dinosaurs <select id="sort">${[['featured','Featured'],['records','Most records'],['oldest','Oldest first'],['newest','Newest first'],['az','A–Z']].map(([v,t]) => `<option value="${v}" ${v===sortBy?'selected':''}>${t}</option>`).join('')}</select></label>` : ''}</div>`;
   }
 
-  if (data.t.length) html += `
+  // Paleozoic: before the dinosaurs
+  // Land animals lead, since they're the stars of the Paleozoic section.
+  const LAND = ['dimetrodon', 'edaphosaurus', 'eryops', 'diplocaulus'];
+  const pal = xin.filter(([, v]) => v.per === 'pal').sort(([a], [b]) => LAND.includes(b) - LAND.includes(a));
+  if (pal.length) {
+    const land = pal.some(([k]) => LAND.includes(k));
+    html += `<section class="era"><div class="erahead pal"><span class="eyebrow">Before the dinosaurs · Paleozoic</span><h2>${land ? 'The sail-backs and their neighbors' : 'Creatures of the ancient seas'}</h2>
+      <p>${land ? 'These animals lived here long before the first dinosaur. None of them are dinosaurs: Dimetrodon and its kin are synapsids, closer to mammals, and to you, than to T. rex.' : `Long before the dinosaurs, warm shallow seas covered this region. These animals left fossils ${data.near}.`}</p></div>
+      <div class="xcards">${pal.map(([k, v]) => xcard(k, v, data)).join('')}</div></section>`;
+  }
+
+  // Mesozoic: the age of dinosaurs
+  const mx = xin.filter(([, v]) => ['tri', 'jur', 'cre'].includes(v.per));
+  if (meso && data.d.length) {
+    const per = PERIODS.filter(p => !p.era && inRange(p.id) && dn(p.id)).map(p => p.name);
+    html += `<section class="era"><div class="erahead meso"><span class="eyebrow">The age of dinosaurs · Mesozoic</span><h2>${shown.length ? `Dinosaurs of the ${per.length > 1 ? per.slice(0, -1).join(', ') + ' and ' + per[per.length - 1] : per[0]}` : 'No dinosaurs in this stretch of time'}</h2>
+      <p>${shown.length ? `Recorded ${data.dnear}. Open any one for its field guide.` : `Nothing is recorded here for the ${active.filter(p => !p.era).map(p => p.name).join(' or ')}. Drag the handles or tap Select all to widen the range.`}</p></div>
+      ${shown.length ? `<div class="cards">${shown.map(x => card(x)).join('')}</div>
+      <div class="foot-note">${ic('info')}<span>A regional snapshot, not a fossil-site map. Records come from many sites and rock formations ${data.dnear}.</span></div>` : ''}</section>`;
+  }
+
+  if (meso && data.t.length) html += `
     <section class="section feature"><img class="feat-art" src="art/track.jpg" alt="Three-toed dinosaur footprint pressed into a slab of rock"><div><span class="eyebrow">Footprints</span><h2>They walked right here.</h2>
       <p>Fossil tracks get their own names, because it’s rarely certain which dinosaur made them.</p>
       <div class="tracks">${data.t.map(([g,n,f]) => `<div class="track-chip"><b>${g}</b><span>${f[0] ? f[0] + ' Formation · ' : ''}${n} record${n>1?'s':''}</span></div>`).join('')}</div></div></section>`;
 
-  if (data.e.length) html += `
+  if (meso && data.e.length) html += `
     <section class="section"><span class="eyebrow">Eggshell</span><h2>Nests left behind</h2>
       <p>Fossil eggs are named by their shell structure, separately from the dinosaurs that laid them.</p>
       <div class="tracks">${data.e.map(([g,n,f]) => `<div class="track-chip"><b>${g}</b><span>${f[0] ? f[0] + ' Formation · ' : ''}${n} record${n>1?'s':''}</span></div>`).join('')}</div></section>`;
 
-  const isCr = k => /^Cretaceous/.test(INSTEAD[k].tag);
-  const crSea = xs.filter(([k]) => INSTEAD[k].era === 'sea' && isCr(k)), oldSea = xs.filter(([k]) => INSTEAD[k].era === 'sea' && !isCr(k)), ice = xs.filter(([k]) => INSTEAD[k].era === 'ice');
-  const lead = !data.d.length && !crSea.length;
-  const iceFirst = lead && ice.reduce((s,[,n]) => s+n, 0) > oldSea.reduce((s,[,n]) => s+n, 0);
-  if (crSea.length) html += `<section class="section"><span class="eyebrow">Who swam here</span><h2>${pl.state === 'Kansas' ? 'Life in the inland sea' : 'Life in the Cretaceous seas'}</h2>
-    <p>While dinosaurs walked the shores, these animals swam and flew over the sea that once covered this region.</p><div class="xcards">${xcards(crSea)}</div></section>`;
-  const seaHtml = oldSea.length ? `<section class="section"><span class="eyebrow">${lead && !iceFirst ? 'What lived here instead' : 'Other ancient seas'}</span><h2>${lead && !iceFirst ? 'Creatures of the ancient seas' : 'Life in other ancient seas'}</h2>
-    <p>Fossil records of sea life ${data.near}, from long before or after the dinosaurs.</p><div class="xcards">${xcards(oldSea)}</div></section>` : '';
-  const iceHtml = ice.length ? `<section class="section"><span class="eyebrow">${iceFirst ? 'What lived here instead' : 'Much later'}</span><h2>The Ice Age giants</h2>
-    <p>Long after the dinosaurs, these animals left fossils ${data.near}.</p><div class="xcards">${xcards(ice)}</div></section>` : '';
-  html += iceFirst ? iceHtml + seaHtml : seaHtml + iceHtml;
+  if (mx.length) html += `<section class="era"><div class="erahead meso"><span class="eyebrow">${data.d.length ? 'Also in the age of dinosaurs' : 'The age of dinosaurs · Mesozoic'}</span><h2>${pl.state === 'Kansas' ? 'Life in the inland sea' : 'Who swam and flew here'}</h2>
+    <p>While dinosaurs walked the land, these animals swam and flew over the seas that covered this region. None of them are dinosaurs.</p><div class="xcards">${mx.map(([k, v]) => xcard(k, v, data)).join('')}</div></section>`;
 
+  // Cenozoic: after the dinosaurs
+  const cen = xin.filter(([, v]) => v.per === 'cen');
+  if (cen.length) {
+    const ice = cen.some(([, v]) => /Pleistocene/.test(v.tag)), shark = cen.some(([k]) => k === 'otodus');
+    html += `<section class="era"><div class="erahead cen"><span class="eyebrow">After the dinosaurs · Cenozoic</span><h2>${ice ? 'The Ice Age giants' : 'After the dinosaurs'}</h2>
+      <p>Mammals${shark ? ' and giant sharks' : ''} took over once the dinosaurs were gone. These animals left fossils ${data.near}.</p></div>
+      <div class="xcards">${cen.map(([k, v]) => xcard(k, v, data)).join('')}</div></section>`;
+  }
+
+  if ((data.d.length || xs.length) && !shown.length && !xin.length && !(meso && data.d.length)) html += `<div class="empty"><h3>Nothing in this stretch of time</h3><p>No fossils are recorded here for the ${active.map(p => p.name).join(' or ')}. Drag the handles or tap Select all to see everything.</p></div>`;
   if (!data.d.length && !pl.sea) html += `<section class="birds"><img src="art/birds.jpg" alt="Two sandhill cranes wading in a marsh"><div class="btxt"><span class="eyebrow">Plot twist</span><h2>Your local dinosaurs have feathers.</h2>
     <p>Birds are living dinosaurs, descended from small feathered theropods. The crane in the marsh and the sparrow at the feeder are your prehistoric neighbors, still here.</p></div></section>`;
 
@@ -638,10 +699,10 @@ function renderResults(){
   // Tap a period to focus on it; tap it again to bring every period back.
   app.querySelectorAll('[data-per]').forEach(b => b.addEventListener('click', () => {
     const i = PERIODS.findIndex(p => p.id === b.dataset.per);
-    rng = rng[0] === i && rng[1] === i ? [0, 2] : [i, i]; redraw();
+    rng = rng[0] === i && rng[1] === i ? [0, 4] : [i, i]; redraw();
   }));
-  document.getElementById('selall')?.addEventListener('click', () => { rng = [0, 2]; redraw(); });
-  // Handles snap to period boundaries (0–3); the range always keeps at least one period.
+  document.getElementById('selall')?.addEventListener('click', () => { rng = [0, 4]; redraw(); });
+  // Handles snap to period boundaries (0–5); the range always keeps at least one period.
   const setEdge = (h, edge) => {
     const next = h === 0 ? [Math.min(edge, rng[1]), rng[1]] : [rng[0], Math.max(edge - 1, rng[0])];
     if (next[0] !== rng[0] || next[1] !== rng[1]) { rng = next; redraw(); return true; }
@@ -657,7 +718,7 @@ function renderResults(){
       e.preventDefault();
       const move = ev => {
         const r = document.getElementById('track').getBoundingClientRect();
-        setEdge(h, Math.max(0, Math.min(3, Math.round((ev.clientX - r.left) / r.width * 3))));
+        setEdge(h, Math.max(0, Math.min(5, Math.round((ev.clientX - r.left) / r.width * 5))));
       };
       document.addEventListener('pointermove', move);
       document.addEventListener('pointerup', () => document.removeEventListener('pointermove', move), {once:true});
@@ -707,21 +768,27 @@ function renderDetail(){
 
 /* ---------- non-dinosaur detail ---------- */
 function renderX(){
-  const k = currentX, it = INSTEAD[k], F = XFACTS[k], data = DATA, n = data?.x?.[k];
-  if (!it || !F || !n) return go('results', {replace:true});
-  const [stats, moreT, moreP, sci] = F;
-  const peers = Object.entries(data.x).filter(([j]) => j !== k && INSTEAD[j]?.era === it.era && INSTEAD[j].tag === it.tag).sort((a,b) => b[1]-a[1]).slice(0,3);
-  const why = `The Paleobiology Database lists ${n} ${it.name.toLowerCase()} record${n>1?'s':''} ${data.near}, ${it.era === 'ice' ? 'from the last Ice Age' : 'from rocks laid down in an ancient sea'}.`;
+  const k = currentX, it = INSTEAD[k], F = XFACTS[k], data = DATA, v = data?.x?.[k];
+  if (!it || !F || !v) return go('results', {replace:true});
+  const [stats, moreT, moreP, sci] = F, n = v.n, sil = XSIL[k];
+  const peers = Object.entries(data.x).filter(([j, w]) => j !== k && w.per === v.per).sort((a,b) => b[1].n - a[1].n).slice(0,3);
+  const list = a => a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a[0];
+  const ages = v.ages.slice(0, 3).map(([a]) => a);
+  const why = `The Paleobiology Database lists ${n} fossil record${n>1?'s':''} of ${/s$/.test(it.name) ? it.name.toLowerCase() : it.name} ${data.near}${ages.length ? `, from ${list(ages)} rocks` : ''}.`;
+  const here = v.ages.length ? v.ages.slice(0, 3).map(([a, c]) => `${a} (${c})`).join(', ') + (v.ages.length > 3 ? ` and ${v.ages.length - 3} more` : '') : v.tag;
+  const era = PERIODS.find(p => p.id === v.per);
   app.innerHTML = `<div class="detail">
   <div class="d-top"><div class="crumbs"><button class="back" data-go="results">${ic('back')}Back to results</button><span>/ ${placeName(place)}</span></div><span class="eyebrow">Field guide</span></div>
-  <div class="d-head"><div><div class="row"><span class="tag ${it.era}">${it.tag}</span><span>${it.when}</span></div>
+  <div class="d-head"><div><div class="row"><span class="tag ${v.per}">${v.tag}</span><span>${it.kind} · Not a dinosaur</span></div>
     <h1>${it.name}</h1><p class="sci">${sci}</p></div>
     <span class="rec">${ic('pin')}Recorded ${data.near.replace(/ of .*$/, '')}</span></div>
   <div class="d-grid">
     <div class="plate"><span class="lbl">${sci}</span>${XART[k] ? `<button class="expand" id="expand" aria-label="View larger">${ic('expand')}</button>` : ''}
-      ${XART[k] ? `<div class="art"><img src="art/${XART[k]}.jpg" alt="${it.name} illustration"></div><span class="credit">${ic('pencil')}Life reconstruction · Coloration is interpretive</span>` : `<div class="art pending"><span class="ghost">${it.name}</span><span class="note">Illustration coming</span></div>`}</div>
+      ${XART[k] ? `<div class="art"><img src="art/${XART[k]}.jpg" alt="${it.name} illustration"></div><span class="credit">${ic('pencil')}Life reconstruction · Coloration is interpretive</span>`
+        : sil ? `<div class="art sil ${v.per}"><span class="shape" style="--m:url('art/sil/${sil[0]}.png')" role="img" aria-label="${it.name} silhouette"></span></div><span class="credit">${ic('pencil')}${sil[3] ? `Silhouette of a related ${sil[3]} · ` : 'Silhouette · '}${sil[1]} · ${sil[2]} · via PhyloPic</span>`
+        : `<div class="art pending"><span class="ghost">${it.name}</span><span class="note">Illustration coming</span></div>`}</div>
     <aside class="glance"><span class="eyebrow">At a glance</span><h2>${it.name}</h2><p>${it.text}</p>
-      <dl class="facts"><div><dt>Lived</dt><dd>${it.when}</dd></div><div><dt>Setting</dt><dd>${it.tag}</dd></div><div><dt>Records nearby</dt><dd>${n}</dd></div></dl></aside>
+      <dl class="facts"><div><dt>Lived</dt><dd>${it.when}</dd></div><div><dt>Era</dt><dd>${era.name}${era.era ? '' : ' · Mesozoic'}</dd></div><div><dt>Period of records here</dt><dd>${here}</dd></div><div><dt>Records nearby</dt><dd>${n}</dd></div></dl></aside>
   </div>
   <div class="stats">${stats.map(([a,b,c]) => `<div class="stat"><span class="k">${a}</span><span class="v">${b}</span><span class="s">${c}</span></div>`).join('')}</div>
   <div class="story">
@@ -729,8 +796,8 @@ function renderX(){
     <div><h2>${moreT}</h2><p>${moreP}</p>
       <div class="links"><a href="https://en.wikipedia.org/wiki/${encodeURIComponent(sci.split(' and ')[0])}" target="_blank" rel="noopener">Further reading ${ic('out')}</a></div></div>
   </div>
-  ${peers.length ? `<section class="related"><div class="morehead"><span class="eyebrow">More from the same ${it.era === 'ice' ? 'Ice Age' : 'seas'}</span><span>Also recorded ${data.near}</span></div>
-    <div class="xcards">${peers.map(([j,m]) => { const o = INSTEAD[j]; return `<button class="xcard" data-x="${j}">${XART[j] ? `<div class="art"><img src="art/${XART[j]}.jpg" alt="${o.name} illustration" loading="lazy"></div>` : ''}<div class="xbody"><span class="tag ${o.era}">${o.tag}</span><h3>${o.name}</h3></div></button>`; }).join('')}</div></section>` : ''}</div>`;
+  ${peers.length ? `<section class="related"><div class="morehead"><span class="eyebrow">More from the ${era.name}</span><span>Also recorded ${data.near}</span></div>
+    <div class="xcards">${peers.map(([j, w]) => xcard(j, w, data)).join('')}</div></section>` : ''}</div>`;
   document.getElementById('expand')?.addEventListener('click', () => {
     const lb = document.createElement('div'); lb.className = 'lightbox'; lb.setAttribute('role','dialog'); lb.setAttribute('aria-label', it.name + ' illustration');
     lb.innerHTML = `<img src="art/${XART[k]}.jpg" alt="${it.name} illustration"><button>Close</button>`;
@@ -743,7 +810,7 @@ function renderX(){
 
 /* ---------- about ---------- */
 function renderAbout(){
-  const artists = [...new Set([...Object.values(SIL), ...Object.values(FAMSIL), ...Object.values(GRPSIL)].map(v => v[1]).filter(Boolean))].sort((a,b) => a.localeCompare(b));
+  const artists = [...new Set([...Object.values(SIL), ...Object.values(FAMSIL), ...Object.values(GRPSIL), ...Object.values(XSIL)].map(v => v[1]).filter(Boolean))].sort((a,b) => a.localeCompare(b));
   app.innerHTML = `<article class="about"><span class="eyebrow">About the data</span><h1>Where these records come from</h1>
   <p>Dino Tracker looks up fossil finds in the Paleobiology Database, a public archive compiled by researchers from published scientific literature. Its data is shared under a Creative Commons Attribution 4.0 license.</p>
   <h2>A place, not a pinpoint</h2><p>Your ZIP code, search or location sets a starting point anywhere in the world. Dino Tracker searches about ${RADIUS} miles (160 km) around it, and up to ${WIDE} miles (400 km) when nothing turns up nearby. Results describe the wider region. They never suggest there are fossils at your address.</p>
@@ -751,6 +818,7 @@ function renderAbout(){
   <h2>Why some places have no dinosaurs</h2><p>Dinosaurs only fossilize in rocks from their time, about 252 to 66 million years ago, that formed on land or near shore. Much of the eastern and central US is built from older seafloor rock, or from rock too young to hold dinosaurs. Those places show what lived there instead.</p>
   <h2>Looking up a dinosaur</h2><p>Search for any dinosaur by name to see every place the Paleobiology Database records it. Each dot is a fossil site, not a range map: dinosaurs lived far more widely than the places their bones happened to survive and be found. Older records can also reflect identifications that scientists have since questioned.</p>
   <h2>Why the map is uneven</h2><p>The fossil record follows the people who search for it. North America, Europe, Argentina and China have been explored for well over a century, while much of Africa, South Asia and Siberia has barely been surveyed. An empty region usually means “not yet found,” not “nothing lived here.”</p>
+  <h2>Before and after the dinosaurs</h2><p>The timeline runs from the Paleozoic, when trilobites, armored fish and sail-backed Dimetrodon lived, through the Triassic, Jurassic and Cretaceous, to the Cenozoic, when mammals took over. Each animal that isn’t a dinosaur is labeled with the period its fossils nearby come from, such as Ordovician or Pleistocene, worked out from the ages of the records themselves.</p>
   <h2>Footprints, eggs and birds</h2><p>Fossil tracks and eggshell are named separately from the animals that made them, so they appear in their own sections. Birds are dinosaurs too, but this guide focuses on the non-bird dinosaurs, plus a few toothed early birds from the age of dinosaurs.</p>
   <h2>Offline</h2><p>Places you’ve looked up are saved on your device, so they still open without a connection. Elsewhere in the US, Dino Tracker falls back to statewide records saved in October 2026.</p>
   <h2>Illustrations and silhouettes</h2><p>Paintings are from the Dino Tracker specimen collection. Dinosaurs without a painting yet use silhouettes from PhyloPic, an open library of organism silhouettes, limited to images in the public domain or under a Creative Commons Attribution license. When there is no usable silhouette of a dinosaur itself, a close relative is shown and labeled. Silhouettes by ${artists.join(', ')}.</p></article>`;
