@@ -32,7 +32,7 @@ h1,h2,h3{font-family:var(--display);font-weight:400;text-wrap:balance;margin:0;c
 .brand .skull{width:127px;height:auto}
 .brand .txt{display:flex;flex-direction:column;gap:8px}
 .brand .wordmark{width:287px;height:auto;display:block}
-.brand .tag{font-family:var(--mono);font-weight:500;font-size:18px;line-height:23px;letter-spacing:.06em;color:var(--nav-ink)}
+.brand .tagline{font-family:var(--mono);font-weight:500;font-size:18px;line-height:23px;letter-spacing:.06em;color:var(--nav-ink)}
 .nav{display:flex;align-items:center;gap:32px}
 .nav button{background:none;border:0;cursor:pointer;color:var(--nav-ink);padding:4px 0;font-size:14px;line-height:17px}
 .nav button[aria-current="page"]{color:var(--nav-active);font-weight:600}
@@ -271,7 +271,7 @@ label.f{font-weight:600;font-size:12px;line-height:15px;color:var(--ink)}
 }
 @media (max-width:640px){
   .mast .wrap{min-height:0}
-  .brand .skull{width:72px}.brand .wordmark{width:190px}.brand .tag{font-size:12px;line-height:16px}
+  .brand .skull{width:72px}.brand .wordmark{width:190px}.brand .tagline{font-size:12px;line-height:16px}
   .nav{width:100%;justify-content:space-between;gap:16px}
   .findcard{padding:22px}
   .scene{aspect-ratio:auto;display:flex;flex-direction:column}
