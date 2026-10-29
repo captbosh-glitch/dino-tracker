@@ -15,7 +15,7 @@
 :root,:root[data-theme="dark"]{color-scheme:light}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{background:var(--page);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5}
 .wrap{max-width:1440px;margin:0 auto;padding-left:max(var(--gutter),env(safe-area-inset-left,0px));padding-right:max(var(--gutter),env(safe-area-inset-right,0px))}
 button{font:inherit;color:inherit}
 a{color:var(--peri)}
