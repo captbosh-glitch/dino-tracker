@@ -1,0 +1,14 @@
+{
+  "name": "Dino Tracker",
+  "short_name": "Dino Tracker",
+  "description": "A field guide to deep time: find the dinosaurs recorded near you.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7ff",
+  "theme_color": "#2f3a8f",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

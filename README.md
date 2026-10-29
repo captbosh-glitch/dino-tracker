@@ -1,0 +1,35 @@
+# Dino Tracker
+
+**A field guide to deep time.** Enter a US ZIP code or share your location to meet the dinosaurs, ancient sea creatures and Ice Age giants recorded within about 100 miles of you.
+
+Live: https://captbosh-glitch.github.io/dino-tracker/
+
+Concept and product design by Pat David.
+
+## How it works
+
+- **Places.** ZIP codes resolve through [Zippopotam.us](https://zippopotam.us). "Use my location" asks the browser once, rounds the position to about a kilometer, and names the town with OpenStreetMap's [Nominatim](https://nominatim.org). Nothing is stored on a server.
+- **Fossil records.** Results come live from the [Paleobiology Database](https://paleobiodb.org) API: non-bird dinosaur occurrences in a 100-mile box (widened to 250 miles when nothing turns up nearby), plus counts for trilobites, ammonites, marine reptiles and Ice Age mammals.
+- **Classification.** `data/genera.json` maps every dinosaur genus in the database to its group (theropod, sauropod and so on), family, author and type species, and flags trace fossils so footprints get their own section. Eggshell taxa (`*oolithus`) are separated the same way.
+- **Offline.** A service worker keeps the app and any art it has shown. Each place looked up is saved on the device; elsewhere the app falls back to `data/snapshot.json`, statewide records saved in October 2026.
+- **Shareable.** Every screen has an address: `?zip=80401`, `?zip=80401&dino=Stegosaurus`, `?zip=67601&x=xiphactinus`, `?about`.
+
+## Files
+
+| Path | What it is |
+| --- | --- |
+| `index.html`, `app.css`, `app.js` | The app (no build step, no framework) |
+| `data.js` | Field-guide text, sample places, art and silhouette credits |
+| `data/genera.json` | Dinosaur genus lookup built from the Paleobiology Database |
+| `data/snapshot.json` | Statewide records used when offline |
+| `art/` | Specimen paintings; `art/sil/` holds silhouettes |
+| `sw.js`, `manifest.webmanifest`, `icons/` | Offline support and home-screen install |
+
+To run it locally, serve the folder with any static server, for example `python3 -m http.server`.
+
+## Credits
+
+- Fossil occurrence data: The Paleobiology Database, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- Place names: © OpenStreetMap contributors, via Nominatim. ZIP codes: Zippopotam.us.
+- Paintings: the Dino Tracker specimen collection.
+- Silhouettes: [PhyloPic](https://www.phylopic.org), public domain and CC BY images only. Each silhouette is credited to its artist on the dinosaur's page and on the About screen. When no usable silhouette of a genus exists, a labeled silhouette of a close relative is shown.
