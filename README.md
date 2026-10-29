@@ -12,10 +12,11 @@ Case study: https://captbosh-glitch.github.io/dino-tracker/case-study/
 
 - **Places.** US ZIP codes resolve through [Zippopotam.us](https://zippopotam.us). Place-name search and town names come from OpenStreetMap's [Nominatim](https://nominatim.org); search runs only when you press Enter, per its usage policy. "Use my location" and map taps are rounded to about a kilometer. Nothing is stored on a server.
 - **World map.** [Leaflet](https://leafletjs.com) with OpenStreetMap tiles, loaded only when the map scrolls into view. `data/hotspots.json` bins every Mesozoic dinosaur record in the database (about 21,700) into 1.5° cells so the map shows where fossils have been found.
+- **Dinosaur search.** Type any of about 3,900 dinosaur names (with typo-tolerant suggestions) to plot every site where it has been found, straight from the Paleobiology Database. Each site links to the dinosaur's field guide for that area.
 - **Fossil records.** Results come live from the [Paleobiology Database](https://paleobiodb.org) API: non-bird dinosaur occurrences in a 100-mile box (widened to 250 miles when nothing turns up nearby), plus counts for trilobites, ammonites, marine reptiles and Ice Age mammals.
 - **Classification.** `data/genera.json` maps every dinosaur genus in the database to its group (theropod, sauropod and so on), family, author and type species, and flags trace fossils so footprints get their own section. Eggshell taxa (`*oolithus`) are separated the same way.
 - **Offline.** A service worker keeps the app and any art it has shown. Each place looked up is saved on the device; elsewhere in the US the app falls back to `data/snapshot.json`, statewide records saved in October 2026.
-- **Shareable.** Every screen has an address: `?zip=80401`, `?at=43.57,104.42&dino=Velociraptor`, `?zip=67601&x=xiphactinus`, `?about`.
+- **Shareable.** Every screen has an address: `?zip=80401`, `?at=43.57,104.42&dino=Velociraptor`, `?find=Spinosaurus`, `?zip=67601&x=xiphactinus`, `?about`.
 
 ## Files
 
@@ -23,7 +24,7 @@ Case study: https://captbosh-glitch.github.io/dino-tracker/case-study/
 | --- | --- |
 | `index.html`, `app.css`, `app.js` | The app (no build step, no framework) |
 | `data.js` | Field-guide text, sample places, art and silhouette credits |
-| `data/genera.json` | Dinosaur genus lookup built from the Paleobiology Database |
+| `data/genera.json` | Dinosaur genus lookup built from the Paleobiology Database, with record counts for ranking search suggestions |
 | `data/snapshot.json` | Statewide US records used when offline |
 | `data/hotspots.json` | Where dinosaur fossils have been found worldwide, for the map |
 | `art/` | Specimen paintings; `art/sil/` holds silhouettes |

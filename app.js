@@ -199,6 +199,7 @@ function setNav(){
 function urlFor(v){
   const q = new URLSearchParams();
   if (v === 'about') q.set('about', '');
+  else if (v === 'home' && mapDino) q.set('find', mapDino);
   else if (place && v !== 'home') {
     if (place.zip) q.set('zip', place.zip); else q.set('at', `${place.lat},${place.lng}`);
     if (v === 'detail') q.set('dino', current);
@@ -249,7 +250,12 @@ function renderHome(){
       ${WORLD.map(([n, lat, lng]) => `<button class="chip" data-at="${lat},${lng}" data-name="${n}">${n}</button>`).join('')}</div></div>
   <section class="mapcard" aria-labelledby="map-h">
     <div class="mhead"><div><span class="eyebrow">Explore the map</span><h2 id="map-h">Pick any spot on Earth</h2></div>
-      <p>Each dot marks dinosaur fossils found there. Bigger dots, more finds. Tap anywhere to see who lived nearby.</p></div>
+      <p>Each dot marks dinosaur fossils found there. Bigger dots, more finds. Tap anywhere to see who lived nearby, or look up a dinosaur to see everywhere it’s been found.</p></div>
+    <div class="dsearch"><label class="f" for="dq">Look up a dinosaur</label>
+      <div class="zipbox"><input class="zip" id="dq" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="dq-list" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="e.g. Tyrannosaurus" value="${mapDino || ''}">${ic('search')}
+        <ul class="dq-list" id="dq-list" role="listbox" aria-label="Dinosaurs" hidden></ul></div>
+      <div class="resolved" id="dq-out" aria-live="polite"></div></div>
+    <div class="dfound" id="dfound" aria-live="polite" hidden></div>
     <div class="map" id="map" aria-label="World map of dinosaur fossil finds"><div class="map-msg">Loading the map…</div></div>
   </section>
   <div class="guide">
@@ -313,15 +319,137 @@ function renderHome(){
     };
   });
   if (zip.value) check();
+  dinoSearch();
   // The map library only loads once the map scrolls near the screen.
   const el = document.getElementById('map');
   const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); initMap(el); } }, {rootMargin:'300px'});
   io.observe(el);
+  if (mapDino) showDino(mapDino);
+}
+
+/* ---------- dinosaur search ---------- */
+// Every named dinosaur in the database, minus footprints and eggshell, which are named apart from the animals.
+let NAMES = null;
+const loadNames = () => loadGen().then(G => NAMES ||= Object.keys(G).filter(g => !G[g][4] && !/oolith|ovum$/i.test(g)).sort());
+function matchNames(q){
+  // Painted and well-known dinosaurs first, then the ones with the most fossil records.
+  const s = q.toLowerCase(), rank = g => (ART[g] ? -1e5 : GUIDE[g] ? -5e4 : 0) - (GEN[g][5] || 0);
+  const pre = NAMES.filter(g => g.toLowerCase().startsWith(s)).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  const mid = s.length > 2 ? NAMES.filter(g => !g.toLowerCase().startsWith(s) && g.toLowerCase().includes(s)) : [];
+  const hits = [...pre, ...mid];
+  if (hits.length || s.length < 4) return hits.slice(0, 8);
+  // Nothing matches as typed, so offer close spellings: Tyranosaurus finds Tyrannosaurus.
+  const tol = s.length > 6 ? 2 : 1;
+  return NAMES.map(g => [g, Math.min(edits(s, g.toLowerCase().slice(0, s.length)), edits(s, g.toLowerCase()))]).filter(([, d]) => d <= tol)
+    .sort((a, b) => a[1] - b[1] || rank(a[0]) - rank(b[0])).slice(0, 5).map(([g]) => g);
+}
+function edits(a, b){
+  let prev = Array.from({length:b.length + 1}, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] !== b[j - 1]));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+function dinoSearch(){
+  const q = document.getElementById('dq'), list = document.getElementById('dq-list'), out = document.getElementById('dq-out');
+  let opts = [], at = -1;
+  const close = () => { list.hidden = true; q.setAttribute('aria-expanded', 'false'); q.removeAttribute('aria-activedescendant'); at = -1; };
+  const mark = i => {
+    at = i;
+    list.querySelectorAll('li').forEach((li, j) => li.setAttribute('aria-selected', j === i));
+    if (i >= 0) q.setAttribute('aria-activedescendant', 'dq-o' + i); else q.removeAttribute('aria-activedescendant');
+  };
+  const pick = g => { q.value = g; close(); out.textContent = ''; showDino(g); history.replaceState({}, '', urlFor('home')); };
+  q.addEventListener('focus', loadNames, {once:true});
+  q.addEventListener('input', async () => {
+    out.className = 'resolved'; out.textContent = '';
+    const v = q.value.trim();
+    if (v.length < 2) return close();
+    await loadNames();
+    if (q.value.trim() !== v) return;
+    opts = matchNames(v);
+    if (!opts.length) return close();
+    list.innerHTML = opts.map((g, j) => {
+      const k = Math.max(0, g.toLowerCase().indexOf(v.toLowerCase())), i = g.toLowerCase().includes(v.toLowerCase()) ? v.length : 0;
+      return `<li role="option" id="dq-o${j}" data-g="${g}" aria-selected="false"><span class="nm">${g.slice(0, k)}<b>${g.slice(k, k + i)}</b>${g.slice(k + i)}</span><span>${GROUPS[GEN[g][0]]?.[0] || 'Dinosaur'}</span></li>`;
+    }).join('');
+    list.hidden = false; q.setAttribute('aria-expanded', 'true'); mark(-1);
+  });
+  q.addEventListener('keydown', async e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (list.hidden) return;
+      e.preventDefault();
+      mark(e.key === 'ArrowDown' ? (at + 1) % opts.length : at <= 0 ? opts.length - 1 : at - 1);
+    } else if (e.key === 'Escape') close();
+    else if (e.key === 'Enter') {
+      const v = q.value.trim();
+      if (!list.hidden && at >= 0) return pick(opts[at]);
+      if (v.length < 2) return;
+      await loadNames();
+      const hit = NAMES.find(g => g.toLowerCase() === v.toLowerCase()) || (!list.hidden && opts[0]);
+      if (hit) return pick(hit);
+      out.textContent = `We couldn’t find a dinosaur named “${clean(v)}”. Check the spelling, or try its genus, like Triceratops.`; out.classList.add('err');
+    }
+  });
+  // mousedown, not click, so the pick lands before the input loses focus and the list closes
+  list.addEventListener('mousedown', e => { const li = e.target.closest('li'); if (li) { e.preventDefault(); pick(li.dataset.g); } });
+  q.addEventListener('blur', () => setTimeout(close, 100));
+}
+
+const REGION = (() => { try { return new Intl.DisplayNames(['en'], {type:'region'}); } catch { return null; } })();
+const countryOf = cc => { cc = cc === 'UK' ? 'GB' : cc; try { return REGION?.of(cc) || cc; } catch { return cc; } };
+
+// Look up every fossil record of one dinosaur and group them into sites for the map.
+let mapDino = null, FOUND = null, dseq = 0;
+async function showDino(g){
+  const box = document.getElementById('dfound'), my = ++dseq;
+  mapDino = g; FOUND = null; plotDino();
+  if (!box) return;
+  if (!g) { box.hidden = true; return; }
+  box.hidden = false; box.className = 'dfound'; box.innerHTML = `<span class="dmsg">Finding every ${g} fossil…</span>`;
+  let recs;
+  try { [recs] = await Promise.all([getJSON(`${API}/occs/list.json?base_name=${encodeURIComponent(g)}&show=coords,loc&vocab=pbdb&limit=all`).then(j => j.records || []), loadGen()]); }
+  catch { recs = null; }
+  if (my !== dseq || !box.isConnected) return;
+  const reset = '<button class="chip" id="dclear">Show all dinosaurs</button>';
+  if (!recs) { box.innerHTML = `<span class="dmsg">We couldn’t reach the fossil database. Check your connection and try again.</span>${reset}`; return wireClear(); }
+  const sites = {};
+  for (const r of recs) {
+    if (r.lat == null || r.lng == null) continue;
+    const key = `${(+r.lat).toFixed(1)},${(+r.lng).toFixed(1)}`;
+    const s = sites[key] ||= {lat:+r.lat, lng:+r.lng, n:0, cc:r.cc, state:r.state, county:r.county, ea:0, la:999};
+    s.n++; s.ea = Math.max(s.ea, +r.max_ma); s.la = Math.min(s.la, +r.min_ma);
+  }
+  const S = Object.values(sites);
+  if (!S.length) { box.innerHTML = `<span class="dmsg">No mapped fossil records of ${g} yet.</span>${reset}`; return wireClear(); }
+  const cs = {};
+  for (const s of S) if (s.cc) cs[s.cc] = (cs[s.cc] || 0) + s.n;
+  const top = Object.entries(cs).sort((a, b) => b[1] - a[1]).map(([c]) => countryOf(c));
+  const ea = Math.max(...S.map(s => s.ea)), la = Math.min(...S.map(s => s.la)), n = S.reduce((a, s) => a + s.n, 0);
+  const [grp, fam] = GEN[g] || ['other', ''], x = {g, grp, fam, per:periodOf(Math.max(la, 66.1)).id};
+  const sil = !ART[g] && silFor(x);
+  const thumb = ART[g] ? `<img src="art/${ART[g]}.jpg" alt="">` : sil ? `<span class="shape" style="--m:url('art/sil/${sil[0]}.png')"></span>` : '';
+  box.className = `dfound ${x.per}`;
+  box.innerHTML = `<div class="dthumb">${thumb}</div>
+    <div class="dtext"><h3>${g}</h3>
+      <p>${GROUPS[grp]?.[0] || 'Dinosaur'}${fam ? ' · ' + fam : ''} · ${fmtMa(ea, la)}</p>
+      <p>${n} fossil record${n > 1 ? 's' : ''} at ${S.length} site${S.length > 1 ? 's' : ''} · ${top.slice(0, 3).join(', ')}${top.length > 3 ? ` and ${top.length - 3} more ${top.length - 3 > 1 ? 'countries' : 'country'}` : ''}</p></div>
+    ${reset}`;
+  FOUND = {g, S};
+  wireClear(); plotDino();
+}
+function wireClear(){
+  document.getElementById('dclear')?.addEventListener('click', () => {
+    const q = document.getElementById('dq'); if (q) q.value = '';
+    showDino(null); history.replaceState({}, '', urlFor('home'));
+  });
 }
 
 /* ---------- world map ---------- */
 const LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
-let leafletReady = null, HOT = null;
+let leafletReady = null, HOT = null, MAP = null, HOTS = null, SITES = null;
 function loadLeaflet(){
   return leafletReady ||= new Promise((res, rej) => {
     const css = Object.assign(document.createElement('link'), {rel:'stylesheet', href:LEAFLET + 'leaflet.min.css'});
@@ -334,12 +462,13 @@ async function initMap(el){
   catch { el.innerHTML = '<div class="map-msg">The map needs an internet connection. You can still search for a place above.</div>'; return; }
   if (!el.isConnected) return;
   el.innerHTML = '';
-  const map = L.map(el, {worldCopyJump:true, minZoom:el.clientWidth < 500 ? .5 : 1.5, maxZoom:10, scrollWheelZoom:false, preferCanvas:true, zoomSnap:.5});
+  const map = MAP = L.map(el, {worldCopyJump:true, minZoom:el.clientWidth < 500 ? .5 : 1.5, maxZoom:10, scrollWheelZoom:false, preferCanvas:true, zoomSnap:.5});
   if (place?.lat != null) map.setView([place.lat, place.lng], 5); else map.fitBounds([[-55, -130], [72, 150]]);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, className:'dt-tiles',
     attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
   const k = el.clientWidth < 500 ? .6 : 1;   // smaller dots on a phone-sized map
-  for (const [la, ln, n] of HOT) L.circleMarker([la, ln], {radius:k * Math.min(14, 2.5 + Math.sqrt(n) * .55), stroke:false, fillColor:'#5b6bff', fillOpacity:.42, interactive:false}).addTo(map);
+  HOTS = L.layerGroup(HOT.map(([la, ln, n]) => L.circleMarker([la, ln], {radius:k * Math.min(14, 2.5 + Math.sqrt(n) * .55), stroke:false, fillColor:'#5b6bff', fillOpacity:.42, interactive:false}))).addTo(map);
+  SITES = null; plotDino();
   let pin = null, seq = 0;
   map.on('click', async e => {
     const {lat, lng} = e.latlng.wrap(), my = ++seq;
@@ -351,6 +480,26 @@ async function initMap(el){
     pop.setContent(`<div class="pop"><b>${pl.sea ? 'Open ocean' : placeName(pl)}</b><span>${pl.sea ? pl.town : coordLabel(pl.lat, pl.lng)}</span><button class="btn primary" type="button">${ic('arrow')}Find dinosaurs here</button></div>`);
     pop.getElement()?.querySelector('button')?.addEventListener('click', () => open(pl));
   });
+}
+
+// Mark every site where the looked-up dinosaur has been found, and fade the other dots behind them.
+function plotDino(){
+  if (!MAP || !MAP.getContainer().isConnected) return;
+  SITES?.remove(); SITES = null;
+  HOTS?.eachLayer(c => c.setStyle({fillOpacity:FOUND ? .14 : .42}));
+  if (!FOUND) return;
+  const {g, S} = FOUND, small = MAP.getContainer().clientWidth < 500;
+  SITES = L.layerGroup(S.map(s => L.circleMarker([s.lat, s.lng], {radius:(small ? .8 : 1) * Math.min(12, 5 + Math.sqrt(s.n) * 1.2), color:'#fff', weight:2, fillColor:'#2f3a8f', fillOpacity:.92, bubblingMouseEvents:false})
+    .bindPopup(() => {
+      const where = [s.county, s.state, countryOf(s.cc)].filter((v, i, a) => v && a.indexOf(v) === i).join(', ') || coordLabel(s.lat, s.lng);
+      const at = `${s.lat.toFixed(2)},${s.lng.toFixed(2)}`;
+      return `<div class="pop"><b>${clean(where)}</b><span>${s.n} ${g} record${s.n > 1 ? 's' : ''} · ${fmtMa(s.ea, s.la).replace(' million years ago', ' Ma')}</span>
+        <a class="btn primary" href="?at=${at}&dino=${g}" data-nav>${ic('arrow')}Meet ${g} here</a>
+        <a class="btn" href="?at=${at}" data-nav>See who lived nearby</a></div>`;
+    }, {closeButton:false, className:'dt-pop', offset:[0, -4]}))).addTo(MAP);
+  const b = L.latLngBounds(S.map(s => [s.lat, s.lng]));
+  if (S.length === 1) MAP.setView(b.getCenter(), 5);
+  else MAP.fitBounds(b, {padding:[36, 36], maxZoom:6});
 }
 
 // Open a place: show the results screen right away in a loading state, then fill it in.
@@ -541,7 +690,7 @@ function renderDetail(){
   <div class="story">
     <div><h2>${ic('map')}Why it appears near ${nearName}</h2><p>${why}</p><small>Regional evidence, not a claim of fossils ${place.zip ? 'within ZIP code ' + place.zip : 'at your exact location'}.</small></div>
     <div><h2>${more[0]}</h2><p>${more[1]}</p>
-      <div class="links"><a href="https://paleobiodb.org/classic/checkTaxonInfo?taxon_name=${encodeURIComponent(x.g)}" target="_blank" rel="noopener">Fossil records ${ic('out')}</a><a href="https://en.wikipedia.org/wiki/${encodeURIComponent(x.g)}" target="_blank" rel="noopener">Further reading ${ic('out')}</a></div></div>
+      <div class="links"><a href="?find=${x.g}" data-find="${x.g}">Everywhere it’s been found ${ic('map')}</a><a href="https://paleobiodb.org/classic/checkTaxonInfo?taxon_name=${encodeURIComponent(x.g)}" target="_blank" rel="noopener">Fossil records ${ic('out')}</a><a href="https://en.wikipedia.org/wiki/${encodeURIComponent(x.g)}" target="_blank" rel="noopener">Further reading ${ic('out')}</a></div></div>
   </div>
   ${peers.length ? `<section class="related"><div class="morehead"><span class="eyebrow">More from the ${per.name}, ${data.dnear}</span><span>Shared region and period</span></div><div class="cards mini">${peers.map(p => card(p, true)).join('')}</div></section>` : ''}</div>`;
   document.getElementById('expand')?.addEventListener('click', () => {
@@ -598,6 +747,7 @@ function renderAbout(){
   <h2>A place, not a pinpoint</h2><p>Your ZIP code, search or location sets a starting point anywhere in the world. Dino Tracker searches about ${RADIUS} miles (160 km) around it, and up to ${WIDE} miles (400 km) when nothing turns up nearby. Results describe the wider region. They never suggest there are fossils at your address.</p>
   <h2>Your location</h2><p>If you choose “Use my location” or tap the map, the position is rounded to about a kilometer and used only to search. It isn’t stored or shared. Place names and search come from OpenStreetMap’s Nominatim service, ZIP codes from Zippopotam.us, and map tiles from OpenStreetMap.</p>
   <h2>Why some places have no dinosaurs</h2><p>Dinosaurs only fossilize in rocks from their time, about 252 to 66 million years ago, that formed on land or near shore. Much of the eastern and central US is built from older seafloor rock, or from rock too young to hold dinosaurs. Those places show what lived there instead.</p>
+  <h2>Looking up a dinosaur</h2><p>Search for any dinosaur by name to see every place the Paleobiology Database records it. Each dot is a fossil site, not a range map: dinosaurs lived far more widely than the places their bones happened to survive and be found. Older records can also reflect identifications that scientists have since questioned.</p>
   <h2>Why the map is uneven</h2><p>The fossil record follows the people who search for it. North America, Europe, Argentina and China have been explored for well over a century, while much of Africa, South Asia and Siberia has barely been surveyed. An empty region usually means “not yet found,” not “nothing lived here.”</p>
   <h2>Footprints, eggs and birds</h2><p>Fossil tracks and eggshell are named separately from the animals that made them, so they appear in their own sections. Birds are dinosaurs too, but this guide focuses on the non-bird dinosaurs, plus a few toothed early birds from the age of dinosaurs.</p>
   <h2>Offline</h2><p>Places you’ve looked up are saved on your device, so they still open without a connection. Elsewhere in the US, Dino Tracker falls back to statewide records saved in October 2026.</p>
@@ -605,8 +755,10 @@ function renderAbout(){
 }
 
 document.addEventListener('click', async e => {
-  const t = e.target.closest('[data-go],[data-zip],[data-at],[data-dino],[data-x]');
+  const t = e.target.closest('[data-go],[data-zip],[data-at],[data-dino],[data-x],[data-nav],[data-find]');
   if (!t) return;
+  if (t.dataset.nav != null) { e.preventDefault(); history.pushState({}, '', t.getAttribute('href')); return route(); }
+  if (t.dataset.find) { e.preventDefault(); mapDino = t.dataset.find; go('home'); return document.querySelector('.mapcard')?.scrollIntoView({block:'start'}); }
   if (t.dataset.zip) { const r = await placeFromZip(t.dataset.zip); if (!r.none) open(r); return; }
   if (t.dataset.at) { const [lat, lng] = t.dataset.at.split(',').map(Number), r = await placeFromCoords(lat, lng); open({...r, town:t.dataset.name?.split(', ')[0] || r.town}); return; }
   if (t.dataset.dino) return go('detail', {dino: t.dataset.dino});
@@ -615,12 +767,17 @@ document.addEventListener('click', async e => {
   go(t.dataset.go);
 });
 
-// Read the address bar: ?zip=80401, ?at=39.76,-105.22, plus &dino= or &x= for a detail page, or ?about.
+// Read the address bar: ?zip=80401, ?at=39.76,-105.22, plus &dino= or &x= for a detail page, ?find=Tyrannosaurus for the map, or ?about.
 async function route(replace){
   const q = new URLSearchParams(location.search);
   if (q.has('about')) return go('about', {history:false});
-  const zip = q.get('zip'), at = q.get('at');
-  if (!zip && !at) { place = null; return go('home', {history:false}); }
+  const zip = q.get('zip'), at = q.get('at'), find = q.get('find');
+  if (!zip && !at) {
+    place = null; mapDino = /^[A-Za-z]{2,40}$/.test(find || '') ? find : null;
+    go('home', {history:false});
+    if (mapDino) document.querySelector('.mapcard')?.scrollIntoView({block:'start'});
+    return;
+  }
   const then = q.get('dino') ? 'detail' : q.get('x') ? 'xdetail' : 'results';
   current = q.get('dino'); currentX = q.get('x');
   const same = place && (zip ? place.zip === zip : `${place.lat},${place.lng}` === at);
