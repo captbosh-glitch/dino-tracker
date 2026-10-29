@@ -6,6 +6,8 @@ Live: https://captbosh-glitch.github.io/dino-tracker/
 
 Concept and product design by Pat David.
 
+Case study: https://captbosh-glitch.github.io/dino-tracker/case-study/
+
 ## How it works
 
 - **Places.** US ZIP codes resolve through [Zippopotam.us](https://zippopotam.us). Place-name search and town names come from OpenStreetMap's [Nominatim](https://nominatim.org); search runs only when you press Enter, per its usage policy. "Use my location" and map taps are rounded to about a kilometer. Nothing is stored on a server.

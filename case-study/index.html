@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Designing Dino Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Lora:ital,wght@0,400;0,500;1,400&display=swap">
+<meta name="description" content="Case study: how a childhood question, “Did dinosaurs live near me?”, became a field guide to deep time built on real fossil records from anywhere on Earth.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Designing Dino Tracker">
+<meta property="og:description" content="How “Did dinosaurs live near me?” became a field guide to deep time, built on real fossil records from anywhere on Earth.">
+<meta property="og:url" content="https://captbosh-glitch.github.io/dino-tracker/case-study/">
+<meta property="og:image" content="https://captbosh-glitch.github.io/dino-tracker/case-study/img/app-home.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../icons/favicon.png" type="image/png">
+<link rel="canonical" href="https://captbosh-glitch.github.io/dino-tracker/case-study/">
+<style>
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; }
+img { max-width: 100%; }
+
+/* Layout: a long-read in the product's own field-guide language. A navy masthead band opens it, chapters run
+   down a 680px reading column, and screenshots break out wider, with before/after pairs side by side.
+   Single light theme on purpose: it shows the product as designed. */
+:root {
+  --navy: #2f3a8f; --mark: #a5b4fc; --nav-ink: #eaf0ff; --nav-muted: #b9c3ef;
+  --peri: #5b6bff; --peri-soft: #eaf0ff; --page: #f4f7ff; --card: #ffffff; --paper: #fbf7ec;
+  --ink: #1f2937; --muted: #475569; --faint: #64748b; --line: #d7e3ff;
+  --tri: #fce7bc; --tri-ink: #854d0e; --jur: #ccf0e5; --jur-ink: #115e59; --cre: #eaddfb; --cre-ink: #63339a;
+  --display: 'Lora', Georgia, 'Times New Roman', serif;
+  --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { background: var(--page); color: var(--ink); font: 17px/1.65 var(--body); -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { font-family: var(--display); font-weight: 400; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+p { margin: 0; }
+a { color: var(--peri); text-underline-offset: 3px; }
+.gutter { padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+.col { max-width: 680px; margin: 0 auto; }
+.wide { max-width: 1120px; margin: 0 auto; }
+.eyebrow { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--peri); }
+.eyebrow::before { content: ""; width: 26px; height: 1px; background: currentColor; }
+
+/* hero */
+.hero { background: var(--navy); color: var(--nav-ink); }
+.hero .wide { padding-block: 72px 0; }
+.hero .eyebrow { color: var(--mark); }
+.hero .eyebrow a { color: inherit; }
+.hero h1 { font-size: clamp(54px, 9vw, 112px); line-height: .95; margin-top: 20px; color: var(--nav-ink); }
+.hero h1 em { color: var(--mark); }
+.hero .dek { font-size: clamp(19px, 2.2vw, 23px); line-height: 1.45; max-width: 34em; margin-top: 22px; color: #dbe3ff; }
+.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 18px 28px; margin-top: 40px; padding-top: 24px; border-top: 1px solid rgb(234 240 255 / .2); }
+.meta dt { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--nav-muted); }
+.meta dd { margin: 4px 0 0; font-size: 15px; }
+.meta a { color: var(--mark); }
+.hero figure { margin: 48px 0 0; }
+.hero figure img { display: block; width: 100%; border-radius: 12px 12px 0 0; border: 0; box-shadow: 0 -10px 40px rgb(0 0 0 / .25); }
+
+/* chapters */
+section { padding-block: 72px 8px; }
+section h2 { font-size: clamp(34px, 4.6vw, 48px); line-height: 1.08; margin-top: 12px; }
+.col > p, .col > ul, .col > ol { margin-top: 18px; }
+.lead { font-size: 20px; line-height: 1.55; }
+.pull { font-family: var(--display); font-style: italic; font-size: clamp(26px, 3.4vw, 36px); line-height: 1.25; color: var(--navy); margin-top: 34px; padding-left: 20px; border-left: 3px solid var(--peri); }
+ul.rules { list-style: none; padding: 0; display: grid; gap: 14px; margin-top: 26px; }
+ul.rules li { padding: 16px 20px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+ul.rules b { display: block; font-family: var(--display); font-weight: 400; font-size: 23px; line-height: 1.25; }
+
+/* figures */
+figure { margin: 34px 0 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); background: var(--card); }
+figcaption { font-size: 14px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+figcaption b { color: var(--ink); }
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.pair.phone { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: center; }
+.tag { display: inline-block; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; margin-bottom: 8px; }
+.tag.before { background: var(--line); color: var(--muted); }
+.tag.after { background: var(--peri); color: #fff; }
+.phones { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.phones img, .pair.phone .shot img { border-radius: 18px; }
+@media (max-width: 760px) {
+  .trio, .pair, .pair.phone { grid-template-columns: 1fr; }
+  .phones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hero .wide { padding-block: 48px 0; }
+}
+
+/* critique list */
+.critique { display: grid; margin-top: 26px; border-top: 1px solid var(--line); }
+.critique div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px 24px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.critique b { font-family: var(--display); font-weight: 400; font-size: 22px; line-height: 1.25; }
+.critique p { color: var(--muted); font-size: 15.5px; }
+@media (max-width: 600px) { .critique div { grid-template-columns: 1fr; } }
+
+/* decisions */
+.decision { padding-top: 56px; }
+.decision h3 { font-size: clamp(28px, 3.4vw, 34px); line-height: 1.15; margin-top: 10px; }
+.num { font-family: var(--mono); font-size: 14px; color: var(--peri); letter-spacing: .08em; }
+
+/* the three periods, rebuilt live */
+.periods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 24px; }
+.periods div { border-radius: 4px; padding: 12px 14px; font-size: 13px; line-height: 1.4; }
+.periods b { display: block; font-size: 15px; font-weight: 600; }
+.periods span { font-family: var(--mono); font-size: 11px; opacity: .85; }
+.p-tri { background: var(--tri); color: var(--tri-ink); }
+.p-jur { background: var(--jur); color: var(--jur-ink); }
+.p-cre { background: var(--cre); color: var(--cre-ink); }
+@media (max-width: 520px) { .periods { grid-template-columns: 1fr; } }
+
+/* headlines for places without dinosaurs */
+.heads { display: grid; gap: 10px; margin-top: 24px; }
+.heads div { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: baseline; }
+.heads b { font-family: var(--display); font-weight: 400; font-size: 21px; line-height: 1.3; }
+.heads span { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); white-space: nowrap; }
+@media (max-width: 600px) { .heads div { grid-template-columns: 1fr; } }
+
+/* stats from the live app */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 26px; }
+.stats div { background: var(--navy); color: var(--nav-ink); border-radius: 10px; padding: 16px 18px; }
+.stats b { display: block; font-family: var(--display); font-weight: 400; font-size: 44px; line-height: 1; color: var(--mark); font-variant-numeric: tabular-nums; }
+.stats span { font-size: 13.5px; color: #cdd6fb; display: block; margin-top: 6px; }
+
+/* process timeline */
+ol.steps { list-style: none; padding: 0; margin-top: 26px; display: grid; counter-reset: s; }
+ol.steps li { counter-increment: s; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px 16px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+ol.steps li::before { content: counter(s); grid-row: 1 / 3; width: 36px; height: 36px; border-radius: 50%; background: var(--peri-soft); color: var(--navy); display: grid; place-items: center; font-family: var(--display); font-size: 19px; }
+ol.steps b { font-weight: 600; }
+ol.steps span { color: var(--muted); font-size: 15.5px; }
+
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 26px; }
+.split > div { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+.split h3 { font-size: 24px; }
+.split ul { margin: 10px 0 0; padding-left: 18px; color: var(--muted); font-size: 15.5px; display: grid; gap: 6px; }
+@media (max-width: 600px) { .split { grid-template-columns: 1fr; } }
+
+footer { margin-top: 88px; background: var(--navy); color: var(--nav-muted); font-size: 14px; }
+footer .col { padding-block: 40px 56px; display: grid; gap: 10px; }
+footer b { color: var(--nav-ink); font-weight: 600; }
+footer a { color: var(--nav-ink); }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wide gutter">
+    <p class="eyebrow">Case study · Product design · <a href="../">Open the app</a></p>
+    <h1>Dino <em>Tracker</em></h1>
+    <p class="dek">A field guide to deep time. Pick any place on Earth and meet the dinosaurs, ancient sea creatures and Ice Age giants whose fossils have been found around it.</p>
+    <dl class="meta">
+      <div><dt>My role</dt><dd>Concept, UX, visual design and illustration direction</dd></div>
+      <div><dt>Built with</dt><dd>Claude, for critique and engineering</dd></div>
+      <div><dt>Tools &amp; data</dt><dd>Figma, Paleobiology Database, PhyloPic, OpenStreetMap</dd></div>
+      <div><dt>Status</dt><dd><a href="https://captbosh-glitch.github.io/dino-tracker/" target="_blank" rel="noopener">Live web app</a>, October 2026</dd></div>
+    </dl>
+    <figure><img src="img/app-home.jpg" alt="The Dino Tracker home screen: Who walked here before you?, a location card with Use my location and a place search, and an illustrated Late Jurassic river valley with a sauropod." width="1400" height="923"></figure>
+  </div>
+</header>
+
+<main>
+  <section class="gutter">
+    <div class="col">
+      <p class="eyebrow">The idea</p>
+      <h2>Did dinosaurs live near me?</h2>
+      <p class="lead">This one is simple. I love dinosaurs, and I wanted to know if any had lived near me.</p>
+      <p>I’d just shipped <a href="https://captbosh-glitch.github.io/backyard-trail/case-study/">Backyard &amp; Trail</a>, a guide to the dangerous plants and animals documented near a place. Dino Tracker borrows its bones: pick a location, see real records from around it, and be honest about what those records mean. The twist is time. Instead of what’s out there today, it shows what walked there 150 million years ago.</p>
+      <p class="pull">“Who walked here before you?”</p>
+    </div>
+  </section>
+
+  <section class="gutter">
+    <div class="col">
+      <p class="eyebrow">First pass</p>
+      <h2>Three screens in Figma</h2>
+      <p>I designed the core flow: choose a location, see regional results filtered by geologic period, and open a field-guide page for each dinosaur. The look came from natural-history museums: a navy masthead with a stenciled wordmark, cream specimen plates, and a color for each period, amber for the Triassic, mint for the Jurassic and lavender for the Cretaceous.</p>
+    </div>
+    <div class="wide">
+      <figure class="trio">
+        <div><img src="img/mock-location.jpg" alt="Figma mockup of the location screen: Who walked here before you?, with a ZIP code field and a Jurassic landscape." width="1200" height="894"></div>
+        <div><img src="img/mock-results.jpg" alt="Figma mockup of regional results near Golden, Colorado, with a period slider and dinosaur cards." width="1200" height="1148"></div>
+        <div><img src="img/mock-detail.jpg" alt="Figma mockup of the Stegosaurus field guide page with a specimen illustration and stats." width="1200" height="1232"></div>
+      </figure>
+      <figcaption class="col"><b>The original mockups.</b> Location, regional results with the period slider, and the Stegosaurus field guide.</figcaption>
+    </div>
+  </section>
+
+  <section class="gutter">
+    <div class="col">
+      <p class="eyebrow">Critique</p>
+      <h2>What real data would test</h2>
+      <p>The voice and art direction held up. Reviewing the screens against real fossil data raised harder questions, and a few smaller fixes.</p>
+      <div class="critique">
+        <div><b>Most places have no dinosaurs</b><p>Florida and much of the East and Midwest have few or none, because those rocks were underwater or eroded away. The mockups only showed Golden, Colorado, one of the richest places in the country.</p></div>
+        <div><b>Art doesn’t scale by hand</b><p>A single region can return dozens of dinosaurs. No one can paint all of them.</p></div>
+        <div><b>Two controls for one job</b><p>The period filter had drag handles plus a “Select all” checkbox, and a smooth range sat over three separate bars.</p></div>
+        <div><b>Arrows that pointed outward</b><p>↗ on every card suggested an external link, when cards opened pages inside the app.</p></div>
+        <div><b>The skull got lost</b><p>The black logo skull nearly disappeared on the navy masthead.</p></div>
+        <div><b>A ZIP code is a place, not a pinpoint</b><p>Results had to make clear they describe a region, never a fossil under someone’s house.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="gutter">
+    <div class="col">
+      <p class="eyebrow">Decisions</p>
+      <h2>Seven changes that made it real</h2>
+    </div>
+
+    <div class="col decision">
+      <span class="num">01</span><h3>Time travel you can tap</h3>
+      <p>The period filter became one control. Handles snap to period boundaries, so the range always matches the bars. On a phone, you tap a period to focus on it and tap again to bring everything back. Each bar shows how many dinosaurs it holds, and empty periods fade back.</p>
+      <div class="periods" aria-label="The three periods of the dinosaur age">
+        <div class="p-tri"><b>Triassic</b><span>252–201 million years ago</span></div>
+        <div class="p-jur"><b>Jurassic</b><span>201–145 million years ago</span></div>
+        <div class="p-cre"><b>Cretaceous</b><span>145–66 million years ago</span></div>
+      </div>
+    </div>
+    <div class="wide">
+      <figure class="pair phone">
+        <div><span class="tag after">Golden, Colorado</span><img src="img/app-results.jpg" alt="Results near Golden: Meet your prehistoric neighbors, with the period filter and cards for Allosaurus, Camarasaurus and Diplodocus." width="1400" height="1100"></div>
+        <div class="shot"><span class="tag after">On a phone</span><img src="img/phone-results.jpg" alt="Phone view of the period filter near Jordan, Montana: 0 Triassic, 6 Jurassic and 31 Cretaceous dinosaurs, with a Triceratops card." width="560" height="1212"></div>
+      </figure>
+    </div>
+
+    <div class="col decision">
+      <span class="num">02</span><h3>Empty places tell a story</h3>
+      <p>A place with no dinosaurs isn’t a dead end. It tells you what lived there instead. Each headline comes from what the fossil records actually show:</p>
+      <div class="heads">
+        <div><b>Before the dinosaurs, this was a sea.</b><span>Columbus, Ohio</span></div>
+        <div><b>Life in the inland sea</b><span>Hays, Kansas</span></div>
+        <div><b>No dinosaurs here. Giants came later.</b><span>Ice Age places</span></div>
+        <div><b>Only their footprints remain.</b><span>Tracks, no bones</span></div>
+        <div><b>These islands are younger than the dinosaurs.</b><span>Hawaii</span></div>
+      </div>
+      <p>Every place without dinosaurs also ends with a plot twist: birds are living dinosaurs, so the crane in the marsh is a prehistoric neighbor too.</p>
+    </div>
+    <div class="wide">
+      <figure class="pair">
+        <div><img src="img/app-columbus.jpg" alt="Columbus, Ohio: Before the dinosaurs, this was a sea, with trilobites, ammonites and Dunkleosteus." width="1400" height="923"></div>
+        <div><img src="img/app-hays.jpg" alt="Hays, Kansas: Life in the inland sea, with Cretoxyrhina, a mosasaur, Pteranodon and Xiphactinus." width="1400" height="1000"></div>
+      </figure>
+      <figcaption class="col"><b>Ohio and Kansas</b> have few or no dinosaurs, but trilobites, sea monsters and giant fish take their place.</figcaption>
+    </div>
+
+    <div class="col decision">
+      <span class="num">03</span><h3>Real records, honestly framed</h3>
+      <p>Results come live from the Paleobiology Database, an open archive of fossil finds compiled by researchers. Dino Tracker searches about 100 miles around a place. When nothing turns up, it looks out to 250 miles and says so: “Dinosaurs, just down the road.” A note under every headline says where the data came from, and every detail page explains “Why it appears near Golden” in plain words, never claiming there are fossils at your address. Some numbers from the live app:</p>
+      <div class="stats">
+        <div><b>30</b><span>dinosaurs within 100 miles of Golden, Colorado</span></div>
+        <div><b>37</b><span>around Jordan, Montana, home of the Hell Creek Formation</span></div>
+        <div><b>21,700</b><span>dinosaur fossil records mapped worldwide</span></div>
+      </div>
+    </div>
+    <div class="wide">
+      <figure><img src="img/app-detail.jpg" alt="Stegosaurus field guide near Golden: a specimen painting, At a glance facts, and stats for length, weight, diet and tail spikes." width="1400" height="1000">
+        <figcaption><b>Every dinosaur opens to a field-guide page:</b> a painting or silhouette, when it lived, the rock formations it was found in, how many records there are nearby and why it appears there.</figcaption></figure>
+    </div>
+
+    <div class="col decision">
+      <span class="num">04</span><h3>Paintings for the stars, silhouettes for everyone</h3>
+      <p>I directed a specimen collection of 38 illustrations in one consistent ink-and-watercolor style: the dinosaurs people know best, plus sea creatures and Ice Age giants. Every other animal gets an open-licensed silhouette from PhyloPic, tinted in its period’s color and credited to its artist. When no silhouette of an animal exists, a close relative stands in, clearly labeled “Related ankylosaurid,” so nothing is passed off as something it isn’t.</p>
+    </div>
+    <div class="wide">
+      <figure><img src="img/specimens.jpg" alt="The Dino Tracker specimen collection sheet: theropods including Tyrannosaurus, Allosaurus and Deinonychus, and sauropods including Diplodocus and Brachiosaurus." width="1600" height="935">
+        <figcaption><b>The specimen collection.</b> I produced three sheets in Figma; Claude cut each illustration from the high-resolution exports and fit it to the cards.</figcaption></figure>
+    </div>
+
+    <div class="col decision">
+      <span class="num">05</span><h3>Footprints and eggs get their own shelf</h3>
+      <p>Fossil tracks and eggshells get their own scientific names, separate from the animals that made them. Mixing them into the dinosaur list would have meant a card for “Eubrontes” next to Allosaurus. They each got a section instead, “They walked right here” and “Nests left behind,” which turned out to be some of the most delightful finds in the app.</p>
+    </div>
+
+    <div class="col decision">
+      <span class="num">06</span><h3>From my backyard to the whole planet</h3>
+      <p>The first version covered the United States. Once it worked, a map was the obvious next step: click any part of the planet and see what was there. The search box now takes a US ZIP code or any place name. A world map shows a dot wherever dinosaur fossils have been found, sized by how many, and tapping anywhere drops a pin. Distances switch to kilometers outside the US, and a tap on open ocean suggests heading for dry land.</p>
+      <p>The map also shows something true about science: the record is uneven. North America, Europe, Argentina and China are covered in dots because paleontologists have dug there for more than a century. An empty region usually means “not found yet,” and the app says so.</p>
+    </div>
+    <div class="wide">
+      <figure class="pair phone">
+        <div><img src="img/app-map.jpg" alt="The world map on the home screen: Pick any spot on Earth, with periwinkle dots wherever dinosaur fossils have been found." width="1400" height="923"></div>
+        <div class="shot"><img src="img/phone-search.jpg" alt="Searching Patagonia on a phone, which asks: Which one? Arizona, Colombia or Argentina." width="560" height="1212"></div>
+      </figure>
+    </div>
+    <div class="wide">
+      <figure><img src="img/app-gobi.jpg" alt="Results in the Gobi Desert, Mongolia: 28 dinosaurs, led by Protoceratops, Pinacosaurus and Velociraptor shown as lavender silhouettes." width="1400" height="1100">
+        <figcaption><b>The Gobi Desert:</b> Protoceratops, Velociraptor and 26 more, 160 km around Dalanzadgad, Mongolia.</figcaption></figure>
+    </div>
+
+    <div class="col decision">
+      <span class="num">07</span><h3>Built like Backyard &amp; Trail</h3>
+      <p>The patterns that earned trust last time carried over:</p>
+      <ul>
+        <li><b>Asking before the phone asks.</b> A short note explains how the location is used before the browser’s permission prompt. It’s rounded to about a kilometer and never stored.</li>
+        <li><b>It works offline.</b> Places you’ve looked up are saved on the device. Anywhere else in the US falls back to statewide records, with a note saying which you’re seeing.</li>
+        <li><b>Every screen is a link.</b> A Velociraptor in the Gobi or the sea monsters of Kansas can be shared with a friend, and the back button always works.</li>
+        <li><b>No account.</b> There’s nothing to sign up for.</li>
+      </ul>
+    </div>
+    <div class="wide">
+      <figure class="phones">
+        <img src="img/phone-home.jpg" alt="Home screen on a phone: Who walked here before you?" width="560" height="1212">
+        <img src="img/phone-map.jpg" alt="The world map on a phone." width="560" height="1212">
+        <img src="img/phone-results.jpg" alt="Period filter on a phone." width="560" height="1212">
+        <img src="img/phone-detail.jpg" alt="Tyrannosaurus field guide on a phone." width="560" height="1212">
+      </figure>
+      <figcaption class="col"><b>Mobile first.</b> Home, the world map, the period filter and a field-guide page.</figcaption>
+    </div>
+  </section>
+
+  <section class="gutter">
+    <div class="col">
+      <p class="eyebrow">Process</p>
+      <h2>From sketch to the whole planet</h2>
+      <ol class="steps">
+        <li><b>Figma mockups</b><span>Three screens, the period colors and the museum look.</span></li>
+        <li><b>Critique and a clickable prototype</b><span>The review above, applied to a prototype built on a saved copy of the fossil records.</span></li>
+        <li><b>The specimen collection</b><span>Three illustration sheets, cut into 38 paintings, plus silhouettes for everything else.</span></li>
+        <li><b>A real web app</b><span>Live fossil records for any US place, GPS, shareable links and offline support.</span></li>
+        <li><b>Going global</b><span>Place search, a world map of fossil finds and kilometers, with over 100 more silhouettes.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="gutter">
+    <div class="col">
+      <p class="eyebrow">Collaboration</p>
+      <h2>Working with Claude</h2>
+      <div class="split">
+        <div><h3>My calls</h3><ul><li>The concept and the time-travel twist</li><li>The Figma mockups, palette and logo</li><li>The specimen illustrations and their style</li><li>Taking it global with a map</li></ul></div>
+        <div><h3>Claude’s work</h3><ul><li>Design critique against real data</li><li>The prototype and the web app</li><li>Fossil records, silhouettes and the map</li><li>Checking every screen at phone size</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="gutter">
+    <div class="col">
+      <p class="eyebrow">Next</p>
+      <h2>Where it goes from here</h2>
+      <ul>
+        <li><b>More paintings</b> for the dinosaurs people see most outside the US, starting with Spinosaurus, Velociraptor, Protoceratops and Iguanodon.</li>
+        <li><b>Where your town was.</b> The continents have moved. A small globe could show where your spot sat 150 million years ago.</li>
+        <li><b>Museums and dig sites</b> near every place, to turn a search into a day out.</li>
+        <li><b>Review by a paleontologist,</b> and testing with kids, parents and teachers.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="gutter">
+  <div class="col">
+    <p><b>Dino Tracker</b> · Concept and product design by Pat David, October 2026. Try it at <a href="https://captbosh-glitch.github.io/dino-tracker/" target="_blank" rel="noopener">captbosh-glitch.github.io/dino-tracker</a>.</p>
+    <p>Fossil records from <a href="https://paleobiodb.org" target="_blank" rel="noopener">The Paleobiology Database</a> (CC BY 4.0). Silhouettes from <a href="https://www.phylopic.org" target="_blank" rel="noopener">PhyloPic</a>, credited in the app. Places and map from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors.</p>
+  </div>
+</footer>
+</body>
+</html>
