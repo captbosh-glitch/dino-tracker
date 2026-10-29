@@ -102,7 +102,14 @@ label.f{font-weight:600;font-size:12px;line-height:15px;color:var(--ink)}
 .dfound .chip{flex:none}
 .dthumb{flex:none;width:88px;height:60px;border-radius:6px;overflow:hidden;background:var(--art);display:grid;place-items:center}
 .dthumb:empty{display:none}
-.dthumb img{width:100%;height:100%;object-fit:cover}
+.dthumb.painted{width:126px;height:54px;background:var(--paper)}
+.dthumb img{width:100%;height:100%;object-fit:contain}
+.dlink{flex:1;min-width:0;display:flex;align-items:center;gap:16px;color:inherit;text-decoration:none;border-radius:8px}
+.dlink:hover h3{color:var(--navy);text-decoration:underline;text-underline-offset:3px}
+.dtext h3 .ico{width:16px;height:16px;vertical-align:-1px;color:var(--peri)}
+.dacts{display:flex;gap:8px;flex:none}
+.chip.primary{background:var(--navy);border-color:var(--navy);color:#fff;text-decoration:none;font-weight:600}
+.chip.primary:hover{background:#262f78}
 .dthumb .shape{width:78px;height:48px;background:var(--navy);-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
 .dtext{flex:1;min-width:0;display:grid;gap:2px}
 .dtext h3{font-family:var(--display);font-weight:400;font-size:20px;line-height:26px;margin:0;color:var(--ink)}
@@ -315,7 +322,7 @@ label.f{font-weight:600;font-size:12px;line-height:15px;color:var(--ink)}
   .scene img{position:static;aspect-ratio:1202/626;height:auto}
   .scene .cap{position:static;width:auto;border-radius:0}
   .samples{margin-top:0}
-  .dsearch{max-width:none}.dfound{flex-wrap:wrap;align-items:flex-start;gap:12px}.dthumb{width:60px;height:44px}.dthumb .shape{width:52px;height:36px}.dfound .dtext{flex-basis:calc(100% - 76px)}.dtext h3{font-size:18px;line-height:22px}
+  .dsearch{max-width:none}.dfound{flex-wrap:wrap;align-items:flex-start;gap:12px}.dthumb{width:60px;height:44px}.dthumb .shape{width:52px;height:36px}.dlink{flex-basis:100%;align-items:flex-start;gap:12px}.dthumb.painted{width:84px;height:36px}.dtext h3{font-size:18px;line-height:22px}
   .mapcard{padding:16px}.mhead{flex-direction:column;align-items:flex-start;gap:8px}.map{height:340px}
   .steps{grid-template-columns:minmax(0,1fr)}
   .birds,.feature{grid-template-columns:minmax(0,1fr)}

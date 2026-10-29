@@ -431,12 +431,14 @@ async function showDino(g){
   const [grp, fam] = GEN[g] || ['other', ''], x = {g, grp, fam, per:periodOf(Math.max(la, 66.1)).id};
   const sil = !ART[g] && silFor(x);
   const thumb = ART[g] ? `<img src="art/${ART[g]}.jpg" alt="">` : sil ? `<span class="shape" style="--m:url('art/sil/${sil[0]}.png')"></span>` : '';
+  // The field guide needs a place, so open it at the site with the most records.
+  const best = S.reduce((a, s) => s.n > a.n ? s : a), guide = `?at=${best.lat.toFixed(2)},${best.lng.toFixed(2)}&dino=${g}`;
   box.className = `dfound ${x.per}`;
-  box.innerHTML = `<div class="dthumb">${thumb}</div>
-    <div class="dtext"><h3>${g}</h3>
+  box.innerHTML = `<a class="dlink" href="${guide}" data-nav aria-label="Open the ${g} field guide"><div class="dthumb${ART[g] ? ' painted' : ''}">${thumb}</div>
+    <div class="dtext"><h3>${g} ${ic('arrow')}</h3>
       <p>${GROUPS[grp]?.[0] || 'Dinosaur'}${fam ? ' · ' + fam : ''} · ${fmtMa(ea, la)}</p>
-      <p>${n} fossil record${n > 1 ? 's' : ''} at ${S.length} site${S.length > 1 ? 's' : ''} · ${top.slice(0, 3).join(', ')}${top.length > 3 ? ` and ${top.length - 3} more ${top.length - 3 > 1 ? 'countries' : 'country'}` : ''}</p></div>
-    ${reset}`;
+      <p>${n} fossil record${n > 1 ? 's' : ''} at ${S.length} site${S.length > 1 ? 's' : ''} · ${top.slice(0, 3).join(', ')}${top.length > 3 ? ` and ${top.length - 3} more ${top.length - 3 > 1 ? 'countries' : 'country'}` : ''}</p></div></a>
+    <div class="dacts"><a class="chip primary" href="${guide}" data-nav>Field guide</a>${reset}</div>`;
   FOUND = {g, S};
   wireClear(); plotDino();
 }
