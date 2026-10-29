@@ -214,6 +214,7 @@ label.f{font-weight:600;font-size:12px;line-height:15px;color:var(--ink)}
 .tag{display:inline-block;border-radius:100px;padding:6px 10px;font-size:10px;line-height:12px;font-weight:600;white-space:nowrap}
 .tag.tri{background:var(--tri-bg);color:var(--tri-fg)} .tag.jur{background:var(--jur-bg);color:var(--jur-fg)} .tag.cre{background:var(--cre-bg);color:var(--cre-fg)}
 .tag.pal{background:var(--pal-bg);color:var(--pal-fg)} .tag.cen{background:var(--cen-bg);color:var(--cen-fg)}
+.tag.nodino{background:none;border:1px solid currentColor;color:var(--muted);padding:5px 9px}
 .tag.blue{background:var(--peri-soft);color:var(--peri)}
 .tag.sea{background:var(--sea-bg);color:var(--sea-fg)} .tag.ice{background:var(--ice-bg);color:var(--ice-fg)}
 .age{font-size:11px;line-height:13px;color:var(--muted);font-variant-numeric:tabular-nums}

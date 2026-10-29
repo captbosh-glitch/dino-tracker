@@ -101,7 +101,7 @@ function aggregate(recs){
 async function lookupLive(pl, signal){
   await loadGen();
   const dinos = mi => getJSON(`${API}/occs/list.json?base_name=Dinosauria^Aves&${box(pl.lat, pl.lng, mi)}&show=class,strat&limit=all`, signal).then(j => aggregate(j.records || []));
-  const others = q => getJSON(`${API}/occs/list.json?base_name=${q}&${box(pl.lat, pl.lng, RADIUS)}&limit=all`, signal).then(j => tally(j.records || []));
+  const others = q => getJSON(`${API}/occs/list.json?base_name=${q}&${box(pl.lat, pl.lng, RADIUS)}&show=strat&limit=all`, signal).then(j => tally(j.records || []));
   const [near, counts] = await Promise.all([dinos(RADIUS), Promise.all(Object.values(XQUERY).map(others))]);
   let rec = near, mi = RADIUS;
   if (!near.d.length) { const wide = await dinos(WIDE); if (wide.d.length) { rec = {d:wide.d, t:near.t}; mi = WIDE; } }
@@ -137,11 +137,14 @@ function ageName(ma){
   for (let i = AGES.length - 1; i >= 0; i--) if (ma <= AGES[i][0]) return AGES[i][1];
 }
 const eraOfAge = a => /Triassic|Jurassic|Cretaceous/.test(a) ? PERIODS.find(p => a.endsWith(p.name)).id : AGES.findIndex(([, n]) => n === a) > 5 ? 'cen' : 'pal';
-// Count records by the period they come from, using the middle of each record's age range.
+// Count records by the period they come from, using the middle of each record's age range, and note the main rock formations.
 function tally(recs){
-  const p = {};
-  for (const r of recs) { const m = (+r.eag + +r.lag) / 2; if (m >= 0) { const a = ageName(m); p[a] = (p[a] || 0) + 1; } }
-  return {n:recs.length, p};
+  const p = {}, f = {};
+  for (const r of recs) {
+    const m = (+r.eag + +r.lag) / 2; if (m >= 0) { const a = ageName(m); p[a] = (p[a] || 0) + 1; }
+    if (r.sfm) { const k = r.sfm.replace(/ Fm\.?$/, ''); f[k] = (f[k] || 0) + 1; }
+  }
+  return {n:recs.length, p, f:Object.entries(f).sort((a, b) => b[1] - a[1]).slice(0, 2).map(e => e[0])};
 }
 function subAge(ma){ const p = periodOf(ma); return p.parts.find(([lim]) => ma > lim)[1] + ' ' + p.name; }
 const fmtMa = (a,b) => Math.round(a) === Math.round(b) ? `About ${Math.round(a)} million years ago` : `${Math.round(a)}–${Math.round(b)} million years ago`;
@@ -163,7 +166,7 @@ function shape(pl, L){
   for (const [k, v] of Object.entries(L.x || {})) {
     if (!INSTEAD[k]) continue;
     const ages = typeof v === 'number' ? [] : Object.entries(v.p).sort((a, b) => b[1] - a[1]);
-    x[k] = {n:typeof v === 'number' ? v : v.n, ages, tag:ages[0]?.[0] || INSTEAD[k].tag, per:ages[0] ? eraOfAge(ages[0][0]) : INSTEAD[k].at};
+    x[k] = {n:typeof v === 'number' ? v : v.n, ages, f:v.f || [], tag:ages[0]?.[0] || INSTEAD[k].tag, per:ages[0] ? eraOfAge(ages[0][0]) : INSTEAD[k].at};
   }
   return {d, t:L.t, e:L.d.filter(r => isEgg(r[0])), x, near, dnear, wide:L.mi === WIDE, source:L.source, at:L.at,
     region: L.source === 'snapshot' ? `Across ${pl.state} · saved records` : isUS(pl) ? `${L.mi}-mile radius` : `${dist(pl, L.mi)} radius`};
@@ -587,10 +590,10 @@ function renderLoading(pl, error){
 
 // A non-dinosaur card. Its tag names the period its fossils here come from.
 function xcard(k, v, data){
-  const it = INSTEAD[k], s = XSIL[k];
-  const art = XART[k] ? `<div class="art"><span class="fm">Not a dinosaur</span><img src="art/${XART[k]}.jpg" alt="${it.name} illustration" loading="lazy"></div>`
-    : s ? `<div class="art sil ${v.per}"><span class="fm">Not a dinosaur</span><span class="shape" style="--m:url('art/sil/${s[0]}.png')" role="img" aria-label="${s[3] ? 'Silhouette of a related ' + s[3] : it.name + ' silhouette'}"></span><span class="note">${s[3] ? 'Related ' + s[3] : 'Silhouette'}</span></div>`
-    : `<div class="art pending"><span class="fm">Not a dinosaur</span><span class="ghost">${it.name}</span><span class="note">Illustration coming</span></div>`;
+  const it = INSTEAD[k], s = XSIL[k], fm = v.f?.[0] ? `<span class="fm">${v.f[0]} Formation</span>` : '';
+  const art = XART[k] ? `<div class="art">${fm}<img src="art/${XART[k]}.jpg" alt="${it.name} illustration" loading="lazy"></div>`
+    : s ? `<div class="art sil ${v.per}">${fm}<span class="shape" style="--m:url('art/sil/${s[0]}.png')" role="img" aria-label="${s[3] ? 'Silhouette of a related ' + s[3] : it.name + ' silhouette'}"></span><span class="note">${s[3] ? 'Related ' + s[3] : 'Silhouette'}</span></div>`
+    : `<div class="art pending">${fm}<span class="ghost">${it.name}</span><span class="note">Illustration coming</span></div>`;
   return `<button class="xcard ${v.per}" data-x="${k}">${art}<div class="xbody"><div class="row"><span class="tag ${v.per}">${v.tag}</span><span>${it.kind}</span></div><h3>${it.name}</h3><p>${it.text}</p><span class="n">${it.when} · ${v.n} record${v.n > 1 ? 's' : ''} ${data.near}</span></div></button>`;
 }
 const fmtAgo = ma => ma ? `${Math.round(ma)} million years ago` : 'Today';
@@ -779,7 +782,7 @@ function renderX(){
   const era = PERIODS.find(p => p.id === v.per);
   app.innerHTML = `<div class="detail">
   <div class="d-top"><div class="crumbs"><button class="back" data-go="results">${ic('back')}Back to results</button><span>/ ${placeName(place)}</span></div><span class="eyebrow">Field guide</span></div>
-  <div class="d-head"><div><div class="row"><span class="tag ${v.per}">${v.tag}</span><span>${it.kind} · Not a dinosaur</span></div>
+  <div class="d-head"><div><div class="row"><span class="tag ${v.per}">${v.tag}</span><span class="tag nodino">Not a dinosaur</span><span>${it.kind}</span></div>
     <h1>${it.name}</h1><p class="sci">${sci}</p></div>
     <span class="rec">${ic('pin')}Recorded ${data.near.replace(/ of .*$/, '')}</span></div>
   <div class="d-grid">
@@ -788,7 +791,7 @@ function renderX(){
         : sil ? `<div class="art sil ${v.per}"><span class="shape" style="--m:url('art/sil/${sil[0]}.png')" role="img" aria-label="${it.name} silhouette"></span></div><span class="credit">${ic('pencil')}${sil[3] ? `Silhouette of a related ${sil[3]} · ` : 'Silhouette · '}${sil[1]} · ${sil[2]} · via PhyloPic</span>`
         : `<div class="art pending"><span class="ghost">${it.name}</span><span class="note">Illustration coming</span></div>`}</div>
     <aside class="glance"><span class="eyebrow">At a glance</span><h2>${it.name}</h2><p>${it.text}</p>
-      <dl class="facts"><div><dt>Lived</dt><dd>${it.when}</dd></div><div><dt>Era</dt><dd>${era.name}${era.era ? '' : ' · Mesozoic'}</dd></div><div><dt>Period of records here</dt><dd>${here}</dd></div><div><dt>Records nearby</dt><dd>${n}</dd></div></dl></aside>
+      <dl class="facts"><div><dt>Lived</dt><dd>${it.when}</dd></div><div><dt>Era</dt><dd>${era.name}${era.era ? '' : ' · Mesozoic'}</dd></div><div><dt>Period of records here</dt><dd>${here}</dd></div>${v.f?.length ? `<div><dt>Rock record</dt><dd>${v.f.map(f => f + ' Formation').join(', ')}</dd></div>` : ''}<div><dt>Records nearby</dt><dd>${n}</dd></div></dl></aside>
   </div>
   <div class="stats">${stats.map(([a,b,c]) => `<div class="stat"><span class="k">${a}</span><span class="v">${b}</span><span class="s">${c}</span></div>`).join('')}</div>
   <div class="story">
