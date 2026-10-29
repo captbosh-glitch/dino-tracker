@@ -75,6 +75,22 @@ label.f{font-weight:600;font-size:12px;line-height:15px;color:var(--ink)}
 .chip:hover{border-color:var(--peri)}
 .samples{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:-12px}
 .samples .eyebrow{color:var(--muted)}
+.mapcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;display:grid;gap:18px}
+.mhead{display:flex;justify-content:space-between;align-items:flex-end;gap:24px}
+.mhead h2{font-size:24px;line-height:30px;margin-top:4px}
+.mhead p{margin:0;max-width:420px;font-size:14px;line-height:1.6;color:var(--muted)}
+.map{height:440px;border-radius:8px;overflow:hidden;background:#eef2fb;border:1px solid var(--line);position:relative;z-index:0}
+.map-msg{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;font-size:13px;color:var(--muted)}
+.map .leaflet-container{font-family:var(--body);background:#eef2fb}
+.dt-tiles{filter:grayscale(1) sepia(.25) hue-rotate(185deg) saturate(1.4) brightness(1.06) contrast(.88)}
+.dt-pop .leaflet-popup-content-wrapper{border-radius:10px;box-shadow:0 6px 24px rgba(31,41,55,.18)}
+.dt-pop .leaflet-popup-content{margin:14px 16px}
+.pop{display:grid;gap:4px;min-width:190px;font-family:var(--body)}
+.pop b{font-family:var(--display);font-weight:400;font-size:17px;line-height:22px;color:var(--ink)}
+.pop span{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.pop .btn{margin-top:8px;height:38px;font-size:13px}
+.resolved .picks{margin-top:8px}
+.resolved .picks .chip{text-align:left}
 .scene{position:relative;border-radius:12px;overflow:hidden;background:var(--art);min-height:506px;margin:0}
 .scene img{width:100%;height:100%;object-fit:cover;object-position:42% 50%;display:block;position:absolute;inset:0}
 .scene .stamp{position:absolute;top:22px;left:24px;display:flex;align-items:center;gap:8px;background:#fff;color:#5b6bff;border-radius:100px;padding:8px 12px;font-family:var(--mono);font-size:10px;line-height:13px;letter-spacing:.04em}
@@ -260,6 +276,7 @@ label.f{font-weight:600;font-size:12px;line-height:15px;color:var(--ink)}
 .lightbox button{position:absolute;top:calc(16px + env(safe-area-inset-top,0px));right:calc(16px + env(safe-area-inset-right,0px));background:#fff;color:#1f2937;border:0;border-radius:100px;padding:8px 16px;cursor:pointer;font-weight:600}
 
 @media (max-width:1100px){
+  .per .pm{flex-direction:column;align-items:flex-start;gap:2px}
   .home-grid,.guide{grid-template-columns:minmax(0,1fr)}
   .scene{min-height:0;aspect-ratio:1202/626}
   .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -278,6 +295,7 @@ label.f{font-weight:600;font-size:12px;line-height:15px;color:var(--ink)}
   .scene img{position:static;aspect-ratio:1202/626;height:auto}
   .scene .cap{position:static;width:auto;border-radius:0}
   .samples{margin-top:0}
+  .mapcard{padding:16px}.mhead{flex-direction:column;align-items:flex-start;gap:8px}.map{height:340px}
   .steps{grid-template-columns:minmax(0,1fr)}
   .birds,.feature{grid-template-columns:minmax(0,1fr)}
   .periods{grid-template-columns:minmax(0,1fr)}

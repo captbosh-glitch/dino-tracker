@@ -33,20 +33,47 @@ async function placeFromZip(z){
   }
 }
 
+// Place names come from outside services and go into the page, so keep them to plain text.
+const clean = s => String(s || '').replace(/[<>&"]/g, '');
+const coordLabel = (lat, lng) => `${Math.abs(lat).toFixed(1)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lng).toFixed(1)}°${lng >= 0 ? 'E' : 'W'}`;
+
+// A Nominatim address -> place. US places keep the state abbreviation; elsewhere the country stands in for it.
+function placeFromAddress(lat, lng, a, name){
+  lat = +(+lat).toFixed(2); lng = +(+lng).toFixed(2);
+  const cc = a.country_code || '';
+  const town = clean(name || a.city || a.town || a.village || a.hamlet || (cc === 'us' ? a.county : '') || '');
+  if (cc === 'us') {
+    const st = (a['ISO3166-2-lvl4'] || '').replace('US-', '');
+    return {lat, lng, cc, town, st, state:clean(a.state) || Object.keys(ABBR).find(k => ABBR[k] === st) || ''};
+  }
+  const country = clean(a.country);
+  if (!cc) return {lat, lng, cc, town:coordLabel(lat, lng), st:'', state:'', sea:true};
+  // out in the countryside, the province or region reads better than a district name
+  return {lat, lng, cc, town:town || clean(a.state || a.region || a.county) || country, st:country, state:clean(a.state || a.region), country};
+}
+
 // Coordinates -> place, rounded to about a kilometer so we never keep an exact position.
 async function placeFromCoords(lat, lng){
   lat = +lat.toFixed(2); lng = +lng.toFixed(2);
   try {
     const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&addressdetails=1&lat=${lat}&lon=${lng}`, {headers:{'Accept-Language':'en'}});
-    const a = (await r.json()).address || {};
-    if (a.country_code && a.country_code !== 'us') return {lat, lng, outside:true};
-    const st = (a['ISO3166-2-lvl4'] || '').replace('US-', '');
-    const state = a.state || Object.keys(ABBR).find(k => ABBR[k] === st) || '';
-    return {lat, lng, town:a.city || a.town || a.village || a.hamlet || a.county || '', st, state};
+    return placeFromAddress(lat, lng, (await r.json()).address || {});
   } catch {
-    return {lat, lng, town:'', st:'', state:''};
+    return {lat, lng, town:coordLabel(lat, lng), st:'', state:''};
   }
 }
+
+// A typed place name -> up to five matching places, anywhere in the world.
+async function placesFromSearch(q){
+  const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&q=${encodeURIComponent(q)}`, {headers:{'Accept-Language':'en'}});
+  const seen = new Set();
+  return (await r.json()).map(x => placeFromAddress(x.lat, x.lon, x.address || {}, x.name))
+    .filter(p => { const k = placeName(p); if (seen.has(k)) return false; seen.add(k); return true; });
+}
+
+// Miles in the US, kilometers everywhere else.
+const isUS = pl => !!pl.zip || pl.cc === 'us' || (!pl.cc && !pl.sea);
+const dist = (pl, mi) => isUS(pl) ? `${mi} miles` : `${Math.round(mi * 1.609 / 10) * 10} km`;
 
 const box = (lat, lng, mi) => {
   const dLat = mi / 69, dLng = mi / (69 * Math.cos(lat * Math.PI / 180));
@@ -83,7 +110,9 @@ async function lookupLive(pl, signal){
 
 async function lookupSnapshot(pl){
   await Promise.all([loadSnap(), loadGen()]);
-  const s = SNAP.STATES[pl.key || pl.state] || {d:[], t:[]};
+  // statewide records only exist for the US; elsewhere there's nothing honest to show offline
+  if (!isUS(pl) || !SNAP.STATES[pl.key || pl.state]) throw new Error('offline');
+  const s = SNAP.STATES[pl.key || pl.state];
   return {d:s.d, t:s.t, x:SNAP.STATES[pl.state]?.x || {}, mi:0, source:'snapshot'};
 }
 
@@ -105,10 +134,10 @@ const fmtMa = (a,b) => Math.round(a) === Math.round(b) ? `About ${Math.round(a)}
 
 // Turn a lookup into what the screens show, with wording for how far the search reached.
 function shape(pl, L){
-  const isEgg = g => /oolith/i.test(g);
+  const isEgg = g => /oolith|ovum$/i.test(g);
   const name = pl.town || (pl.zip ? `ZIP ${pl.zip}` : 'here');
-  const near = L.source === 'snapshot' ? `in ${pl.state}` : `within ${RADIUS} miles of ${name}`;
-  const dnear = L.source === 'snapshot' ? near : `within ${L.mi} miles of ${name}`;
+  const near = L.source === 'snapshot' ? `in ${pl.state}` : `within ${dist(pl, RADIUS)} of ${name}`;
+  const dnear = L.source === 'snapshot' ? near : `within ${dist(pl, L.mi)} of ${name}`;
   const d = L.d.filter(r => !isEgg(r[0])).map(([g,n,f,ea,la]) => {
     const [grp, fam, att, ttl] = GEN[g] || ['other','','',''];
     const mid = (ea+la)/2, per = periodOf(mid);
@@ -116,7 +145,7 @@ function shape(pl, L){
     return {g, n, f, ea, la, grp, fam, att, sci: GUIDE[g]?.sci || ttl || '', per: per.id, sub: subAge(mid), diet};
   });
   return {d, t:L.t, e:L.d.filter(r => isEgg(r[0])), x:L.x, near, dnear, wide:L.mi === WIDE, source:L.source, at:L.at,
-    region: L.source === 'snapshot' ? `Across ${pl.state} · saved records` : `${L.mi}-mile radius`};
+    region: L.source === 'snapshot' ? `Across ${pl.state} · saved records` : isUS(pl) ? `${L.mi}-mile radius` : `${dist(pl, L.mi)} radius`};
 }
 const dinosFor = () => DATA;
 
@@ -153,7 +182,9 @@ function card(x, mini = false){
     </div></button>`;
 }
 
-const placeName = pl => pl.town ? `${pl.town}, ${pl.st}` : pl.zip ? `${pl.zip} · ${pl.st}` : pl.st || 'Your area';
+const placeName = pl => pl.town && pl.st ? `${pl.town}, ${pl.st}` : pl.town ? pl.town : pl.zip ? `${pl.zip} · ${pl.st}` : pl.st || 'Your area';
+// The longer form for the breadcrumb: ZIP, town, state or region, and the country outside the US.
+const placeLine = pl => [pl.zip, [pl.town, pl.state, pl.country].filter((s, i, a) => s && a.indexOf(s) === i).join(', ')].filter(Boolean).join(' · ') || 'Your location';
 
 function setNav(){
   document.getElementById('nav-explore').setAttribute('aria-current', view !== 'about' ? 'page' : 'false');
@@ -173,7 +204,7 @@ function urlFor(v){
     if (v === 'detail') q.set('dino', current);
     if (v === 'xdetail') q.set('x', currentX);
   }
-  const s = q.toString().replace(/=(&|$)/, '$1');
+  const s = q.toString().replace(/=(&|$)/, '$1').replace(/%2C/g, ',');
   return location.pathname + (s ? '?' + s : '');
 }
 
@@ -194,16 +225,16 @@ function renderHome(){
   const z = place?.zip || '';
   app.innerHTML = `<div class="home">
   <div class="intro-row"><div class="intro"><span class="eyebrow">Explore your prehistoric neighborhood</span><h1>Who walked here before you?</h1>
-    <p>Find the dinosaurs that once called your region home. Start with where you are.</p></div>
-    <span class="meta-r">Field notes / North America</span></div>
+    <p>Find the dinosaurs that once called your corner of the world home. Start with where you are.</p></div>
+    <span class="meta-r">Field notes / Planet Earth</span></div>
   <div class="home-grid">
     <section class="findcard" aria-labelledby="find-h">
-      <div class="fhead"><h2 id="find-h">${ic('pin')}Find your location</h2><p>Use your current location or enter a US ZIP code to explore a region.</p></div>
+      <div class="fhead"><h2 id="find-h">${ic('pin')}Find your location</h2><p>Use your current location, or enter a US ZIP code or any place in the world.</p></div>
       <div class="opt"><button class="btn primary" id="gps">${ic('gps')}Use my location</button>
         <div class="hint">Uses GPS · Your browser will ask for permission</div><div id="gps-note" hidden></div></div>
-      <div class="or">or explore by ZIP code</div>
-      <div class="zipopt"><label class="f" for="zip">US ZIP code</label>
-        <div class="zipbox"><input class="zip" id="zip" inputmode="numeric" autocomplete="postal-code" maxlength="5" placeholder="e.g. 80401" value="${z}">${ic('pin')}</div>
+      <div class="or">or search for a place</div>
+      <div class="zipopt"><label class="f" for="zip">ZIP code or place name</label>
+        <div class="zipbox"><input class="zip" id="zip" autocomplete="off" enterkeyhint="search" placeholder="e.g. 80401 or Patagonia" value="${z}">${ic('pin')}</div>
         <div class="resolved" id="zip-out" aria-live="polite"></div>
         <button class="btn" id="find" disabled>${ic('arrow')}Find dinosaurs</button></div>
     </section>
@@ -214,21 +245,31 @@ function renderHome(){
     </figure>
   </div>
   <div class="samples"><span class="eyebrow">Or try a sample place</span>
-    <div class="chips">${SAMPLE_ZIPS.map(k => `<button class="chip" data-zip="${k}">${PLACES[k].town}, ${PLACES[k].st}</button>`).join('')}</div></div>
+    <div class="chips">${SAMPLE_ZIPS.map(k => `<button class="chip" data-zip="${k}">${PLACES[k].town}, ${PLACES[k].st}</button>`).join('')}
+      ${WORLD.map(([n, lat, lng]) => `<button class="chip" data-at="${lat},${lng}" data-name="${n}">${n}</button>`).join('')}</div></div>
+  <section class="mapcard" aria-labelledby="map-h">
+    <div class="mhead"><div><span class="eyebrow">Explore the map</span><h2 id="map-h">Pick any spot on Earth</h2></div>
+      <p>Each dot marks dinosaur fossils found there. Bigger dots, more finds. Tap anywhere to see who lived nearby.</p></div>
+    <div class="map" id="map" aria-label="World map of dinosaur fossil finds"><div class="map-msg">Loading the map…</div></div>
+  </section>
   <div class="guide">
-    <div class="ctx"><span class="eyebrow">A place, not a pinpoint</span><p>Your ZIP code sets a regional starting point. Results describe fossil records across the surrounding area, not a fossil site at your address.</p></div>
+    <div class="ctx"><span class="eyebrow">A place, not a pinpoint</span><p>Your starting point sets a region. Results describe fossil records across the surrounding area, not a fossil site at your address.</p></div>
     <div class="steps">
-      <div class="step">${ic('map')}<h4>Start somewhere</h4><p>Choose a location in the United States.</p></div>
+      <div class="step">${ic('map')}<h4>Start somewhere</h4><p>Choose any place on Earth.</p></div>
       <div class="step">${ic('sliders')}<h4>Travel through time</h4><p>Narrow your discoveries by geologic period.</p></div>
       <div class="step">${ic('note')}<h4>Meet the locals</h4><p>Open a field guide to each dinosaur.</p></div>
     </div>
   </div></div>`;
   const zip = document.getElementById('zip'), out = document.getElementById('zip-out'), find = document.getElementById('find');
   let found = null, seq = 0;
+  const isZip = v => /^\d{5}$/.test(v);
+  // Five digits look up a US ZIP as you type. Anything else waits for Enter, since the place search is a shared free service.
   const check = async () => {
-    const v = zip.value.replace(/\D/g,'').slice(0,5); zip.value = v;
-    found = null; find.disabled = true; out.className = 'resolved'; out.textContent = '';
-    if (v.length < 5) return;
+    const v = zip.value.trim();
+    found = null; out.className = 'resolved'; out.textContent = '';
+    find.disabled = v.length < 2 || (/^\d+$/.test(v) && !isZip(v));
+    if (!isZip(v)) return;
+    find.disabled = true;
     const my = ++seq; out.textContent = 'Looking up ZIP code…';
     const r = await placeFromZip(v);
     if (my !== seq) return;
@@ -236,31 +277,80 @@ function renderHome(){
     found = r; find.disabled = false;
     out.textContent = r.offline ? `${r.state} · you’re offline, so results cover the whole state` : `${r.town}, ${r.state}`;
   };
+  const search = async () => {
+    const v = zip.value.trim();
+    if (found) return open(found);
+    if (isZip(v) || v.length < 2) return;
+    const my = ++seq; out.className = 'resolved'; out.textContent = 'Searching for places…'; find.disabled = true;
+    let list;
+    try { list = await placesFromSearch(v); } catch { list = null; }
+    if (my !== seq) return;
+    find.disabled = false;
+    if (!list) { out.textContent = 'We couldn’t search for places right now. Check your connection and try again.'; out.classList.add('err'); return; }
+    if (!list.length) { out.textContent = `We couldn’t find “${clean(v)}”. Try a town, region or country.`; out.classList.add('err'); return; }
+    if (list.length === 1) return open(list[0]);
+    out.innerHTML = `<span>Which one?</span><div class="chips picks">${list.map((p, i) => `<button class="chip" data-pick="${i}">${placeLine(p)}</button>`).join('')}</div>`;
+    out.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => open(list[+b.dataset.pick])));
+  };
   zip.addEventListener('input', check);
-  zip.addEventListener('keydown', e => { if (e.key === 'Enter' && found) open(found); });
-  find.addEventListener('click', () => found && open(found));
+  zip.addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+  find.addEventListener('click', search);
   document.getElementById('gps').addEventListener('click', () => {
     const n = document.getElementById('gps-note');
     n.hidden = false; n.className = 'notice';
     // Explain before the browser asks, so the permission prompt is never a surprise.
-    n.innerHTML = `<div><b>Find fossils near you</b><br>Dino Tracker uses your location once to search a ${RADIUS}-mile area. It’s rounded to about a kilometer and never stored or shared.</div>
-      <div class="chips"><button class="chip" id="gps-go">Continue</button><button class="chip" id="gps-no">Use a ZIP code instead</button></div>`;
+    n.innerHTML = `<div><b>Find fossils near you</b><br>Dino Tracker uses your location once to search the surrounding region. It’s rounded to about a kilometer and never stored or shared.</div>
+      <div class="chips"><button class="chip" id="gps-go">Continue</button><button class="chip" id="gps-no">Search for a place instead</button></div>`;
     document.getElementById('gps-no').onclick = () => { n.hidden = true; zip.focus(); };
     document.getElementById('gps-go').onclick = () => {
-      if (!navigator.geolocation) { n.innerHTML = '<div>This browser can’t share its location. Enter a ZIP code instead.</div>'; return; }
+      if (!navigator.geolocation) { n.innerHTML = '<div>This browser can’t share its location. Search for a place instead.</div>'; return; }
       n.innerHTML = '<div>Finding your location…</div>';
-      navigator.geolocation.getCurrentPosition(async pos => {
-        const pl = await placeFromCoords(pos.coords.latitude, pos.coords.longitude);
-        if (pl.outside) { n.innerHTML = '<div><b>Dino Tracker covers the United States for now.</b> Try a US ZIP code or one of the sample places.</div>'; return; }
-        open(pl);
-      }, err => {
+      navigator.geolocation.getCurrentPosition(async pos => open(await placeFromCoords(pos.coords.latitude, pos.coords.longitude)), err => {
         n.innerHTML = err.code === 1
-          ? '<div><b>Location is turned off for this site.</b> You can allow it in your browser settings, or enter a ZIP code instead.</div>'
-          : '<div><b>We couldn’t get your location.</b> Check your signal and try again, or enter a ZIP code.</div>';
+          ? '<div><b>Location is turned off for this site.</b> You can allow it in your browser settings, or search for a place instead.</div>'
+          : '<div><b>We couldn’t get your location.</b> Check your signal and try again, or search for a place.</div>';
       }, {enableHighAccuracy:false, timeout:15000, maximumAge:600000});
     };
   });
   if (zip.value) check();
+  // The map library only loads once the map scrolls near the screen.
+  const el = document.getElementById('map');
+  const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); initMap(el); } }, {rootMargin:'300px'});
+  io.observe(el);
+}
+
+/* ---------- world map ---------- */
+const LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
+let leafletReady = null, HOT = null;
+function loadLeaflet(){
+  return leafletReady ||= new Promise((res, rej) => {
+    const css = Object.assign(document.createElement('link'), {rel:'stylesheet', href:LEAFLET + 'leaflet.min.css'});
+    const js = Object.assign(document.createElement('script'), {src:LEAFLET + 'leaflet.min.js', onload:res, onerror:() => { leafletReady = null; rej(); }});
+    document.head.append(css, js);
+  });
+}
+async function initMap(el){
+  try { await loadLeaflet(); HOT ||= await fetch('data/hotspots.json').then(r => r.json()); }
+  catch { el.innerHTML = '<div class="map-msg">The map needs an internet connection. You can still search for a place above.</div>'; return; }
+  if (!el.isConnected) return;
+  el.innerHTML = '';
+  const map = L.map(el, {worldCopyJump:true, minZoom:el.clientWidth < 500 ? .5 : 1.5, maxZoom:10, scrollWheelZoom:false, preferCanvas:true, zoomSnap:.5});
+  if (place?.lat != null) map.setView([place.lat, place.lng], 5); else map.fitBounds([[-55, -130], [72, 150]]);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, className:'dt-tiles',
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+  const k = el.clientWidth < 500 ? .6 : 1;   // smaller dots on a phone-sized map
+  for (const [la, ln, n] of HOT) L.circleMarker([la, ln], {radius:k * Math.min(14, 2.5 + Math.sqrt(n) * .55), stroke:false, fillColor:'#5b6bff', fillOpacity:.42, interactive:false}).addTo(map);
+  let pin = null, seq = 0;
+  map.on('click', async e => {
+    const {lat, lng} = e.latlng.wrap(), my = ++seq;
+    pin?.remove();
+    pin = L.circleMarker(e.latlng, {radius:8, color:'#fff', weight:3, fillColor:'#2f3a8f', fillOpacity:1}).addTo(map);
+    const pop = L.popup({closeButton:false, className:'dt-pop', offset:[0, -6]}).setLatLng(e.latlng).setContent('<div class="pop">Looking up this spot…</div>').openOn(map);
+    const pl = await placeFromCoords(lat, lng);
+    if (my !== seq) return;
+    pop.setContent(`<div class="pop"><b>${pl.sea ? 'Open ocean' : placeName(pl)}</b><span>${pl.sea ? pl.town : coordLabel(pl.lat, pl.lng)}</span><button class="btn primary" type="button">${ic('arrow')}Find dinosaurs here</button></div>`);
+    pop.getElement()?.querySelector('button')?.addEventListener('click', () => open(pl));
+  });
 }
 
 // Open a place: show the results screen right away in a loading state, then fill it in.
@@ -296,7 +386,8 @@ function headlineFor(pl, data){
     return ['Meet your prehistoric neighbors.', `${ps.length > 1 ? `From the ${ps[0]} to the ${ps[ps.length-1]}` : `From the ${ps[0]}`}, discover dinosaurs recorded ${data.dnear}.`];
   }
   if (pl.state === 'Hawaii') return ['These islands are younger than the dinosaurs.', 'Hawaii’s volcanic islands rose from the Pacific long after the dinosaurs were gone, so there are no dinosaur fossils to find.'];
-  if (!xs.length && !data.t.length) return ['No dinosaurs on record here yet.', `The Paleobiology Database doesn’t list dinosaur fossils ${data.dnear}. That can change as new finds are published.`];
+  if (pl.sea && !xs.length && !data.t.length) return ['Nothing but open water.', `No fossils are recorded ${data.dnear}. The deep ocean floor is young rock, and few fossils are ever collected from it. Try a spot along a coastline.`];
+  if (!xs.length && !data.t.length) return ['No dinosaurs on record here yet.', `The Paleobiology Database doesn’t list dinosaur fossils ${data.dnear}. Fossil records follow where paleontologists have searched and published, so many regions are still blank. That can change as new finds come in.`];
   if (data.t.length) return ['Only their footprints remain.', `No dinosaur bones have been recorded ${data.dnear}, but dinosaurs left tracks in the rocks nearby.`];
   if (oldSea >= ice) return ['Before the dinosaurs, this was a sea.', `No dinosaur fossils have been recorded ${data.dnear}. Many of the rocks here are older than the dinosaurs. They formed on the floor of warm, shallow seas full of very different animals.`];
   return ['No dinosaurs here. Giants came later.', `No dinosaur fossils have been recorded ${data.dnear}. Many of the rocks here formed after the dinosaurs were gone, but the Ice Age left a remarkable record of its own.`];
@@ -309,13 +400,12 @@ const SOURCE = {
 };
 
 function renderLoading(pl, error){
-  const loc = [pl.zip, pl.town ? `${pl.town}, ${pl.state}` : pl.state].filter(Boolean).join(' · ');
   app.innerHTML = `<div class="results">
-  <div class="ctxrow"><div class="crumbs">${ic('pin')}<span>${loc || 'Your location'}</span></div>
+  <div class="ctxrow"><div class="crumbs">${ic('pin')}<span>${placeLine(pl)}</span></div>
     <button class="linkbtn" data-go="home">${ic('gps')}Change location</button></div>
-  ${error ? `<div class="empty"><h3>We couldn’t reach the fossil records</h3><p>The Paleobiology Database didn’t respond. Check your connection and try again.</p>
+  ${error ? `<div class="empty"><h3>We couldn’t reach the fossil records</h3><p>${navigator.onLine === false && !isUS(pl) ? 'You’re offline, and this place hasn’t been looked up on this device before. Connect and try again.' : 'The Paleobiology Database didn’t respond. Check your connection and try again.'}</p>
     <div class="chips"><button class="chip" id="retry">Try again</button></div></div>`
-  : `<div class="res-head"><div><h1>Searching deep time…</h1><p>Looking up fossil records within ${RADIUS} miles${pl.town ? ' of ' + pl.town : ''}.</p></div></div>
+  : `<div class="res-head"><div><h1>Searching deep time…</h1><p>Looking up fossil records within ${dist(pl, RADIUS)}${pl.town ? ' of ' + pl.town : ''}.</p></div></div>
     <div class="cards" aria-hidden="true">${'<div class="card skel"><div class="art"></div><div class="card-body"><i></i><i></i><i></i></div></div>'.repeat(6)}</div>`}</div>`;
   document.getElementById('retry')?.addEventListener('click', () => open(place, {history:false}));
 }
@@ -330,7 +420,7 @@ function renderResults(){
   const all = rng[0] === 0 && rng[1] === 2;
   const xs = Object.entries(data.x).filter(([k]) => INSTEAD[k]).sort((a,b) => b[1]-a[1]);
   const xcards = list => list.map(([k,n]) => { const it = INSTEAD[k]; return `<button class="xcard" data-x="${k}">${XART[k] ? `<div class="art"><img src="art/${XART[k]}.jpg" alt="${it.name} illustration" loading="lazy"></div>` : `<div class="art pending"><span class="ghost">${it.name}</span><span class="note">Illustration coming</span></div>`}<div class="xbody"><span class="tag ${it.era}">${it.tag}</span><h3>${it.name}</h3><p>${it.text}</p><span class="n">${it.when} · ${n} record${n>1?'s':''} ${data.near}</span></div></button>`; }).join('');
-  const loc = [pl.zip, pl.town ? `${pl.town}, ${pl.state}` : pl.state].filter(Boolean).join(' · ');
+  const loc = placeLine(pl);
 
   let html = `
   <div class="ctxrow"><div class="crumbs">${ic('pin')}<span>${loc}</span><span>/</span><span>${data.region}</span></div>
@@ -380,11 +470,14 @@ function renderResults(){
     <p>Long after the dinosaurs, these animals left fossils ${data.near}.</p><div class="xcards">${xcards(ice)}</div></section>` : '';
   html += iceFirst ? iceHtml + seaHtml : seaHtml + iceHtml;
 
-  if (!data.d.length) html += `<section class="birds"><img src="art/birds.jpg" alt="Two sandhill cranes wading in a marsh"><div class="btxt"><span class="eyebrow">Plot twist</span><h2>Your local dinosaurs have feathers.</h2>
-    <p>Birds are living dinosaurs, descended from small feathered theropods. The crane in the marsh and the wild turkey in the woods are your prehistoric neighbors, still here.</p></div></section>`;
+  if (!data.d.length && !pl.sea) html += `<section class="birds"><img src="art/birds.jpg" alt="Two sandhill cranes wading in a marsh"><div class="btxt"><span class="eyebrow">Plot twist</span><h2>Your local dinosaurs have feathers.</h2>
+    <p>Birds are living dinosaurs, descended from small feathered theropods. The crane in the marsh and the sparrow at the feeder are your prehistoric neighbors, still here.</p></div></section>`;
 
-  if (!data.d.length && !xs.length) html += `<div class="empty"><h3>No fossil records here yet</h3><p>The database doesn’t list dinosaur or sea-creature records ${data.near}. That can change as more finds are published.</p>
+  if (!data.d.length && !xs.length && !pl.sea) html += `<div class="empty"><h3>No fossil records here yet</h3><p>The database doesn’t list dinosaur or sea-creature records ${data.near}. That can change as more finds are published.</p>
     <div class="chips"><button class="chip" data-zip="80401">Explore Golden, CO instead</button></div></div>`;
+
+  if (pl.sea && !data.d.length && !xs.length) html += `<div class="empty"><h3>Head for dry land</h3><p>These regions are famous for dinosaur fossils.</p>
+    <div class="chips">${WORLD.map(([n, lat, lng]) => `<button class="chip" data-at="${lat},${lng}" data-name="${n}">${n}</button>`).join('')}</div></div>`;
 
   if (pl.sites?.length) html += `<section class="section"><span class="eyebrow">See them in person</span><h2>Museums and sites nearby</h2><p>Places to see real fossils from this area.</p>
     <div class="sites">${pl.sites.map(([n,s]) => `<div class="site"><b>${n}</b><span>${s}</span></div>`).join('')}</div></section>`;
@@ -434,7 +527,7 @@ function renderDetail(){
   const more = G?.more || [`A ${GROUPS[x.grp][0].toLowerCase()} dinosaur`, GROUP_TEXT[x.grp]];
   const peers = sorted(data.d.filter(d => d.per === x.per && d.g !== x.g)).slice(0,3);
   app.innerHTML = `<div class="detail">
-  <div class="d-top"><div class="crumbs"><button class="back" data-go="results">${ic('back')}Back to ${data.d.length} dinosaurs</button><span>/ ${nearName}${place.town ? ', ' + place.state : ''} · ${data.region}</span></div><span class="eyebrow">Species field guide</span></div>
+  <div class="d-top"><div class="crumbs"><button class="back" data-go="results">${ic('back')}Back to ${data.d.length} dinosaurs</button><span>/ ${placeName(place)} · ${data.region}</span></div><span class="eyebrow">Species field guide</span></div>
   <div class="d-head"><div><div class="row"><span class="tag blue">${x.sub}</span><span>${x.fam || GROUPS[x.grp][0]}</span></div>
     <h1>${x.g}</h1><p class="sci">${G ? `${G.sci} · ${G.mean}` : (x.sci || x.att)}</p></div>
     <span class="rec">${ic('pin')}Recorded ${data.dnear.replace(/ of .*$/, '')}</span></div>
@@ -502,18 +595,20 @@ function renderAbout(){
   const artists = [...new Set([...Object.values(SIL), ...Object.values(FAMSIL), ...Object.values(GRPSIL)].map(v => v[1]).filter(Boolean))].sort((a,b) => a.localeCompare(b));
   app.innerHTML = `<article class="about"><span class="eyebrow">About the data</span><h1>Where these records come from</h1>
   <p>Dino Tracker looks up fossil finds in the Paleobiology Database, a public archive compiled by researchers from published scientific literature. Its data is shared under a Creative Commons Attribution 4.0 license.</p>
-  <h2>A place, not a pinpoint</h2><p>Your ZIP code or location sets a starting point. Dino Tracker searches about ${RADIUS} miles around it, and up to ${WIDE} miles when nothing turns up nearby. Results describe the wider region. They never suggest there are fossils at your address.</p>
-  <h2>Your location</h2><p>If you choose “Use my location,” your position is rounded to about a kilometer and used only to search. It isn’t stored or shared. Town names come from OpenStreetMap’s Nominatim service and ZIP codes from Zippopotam.us.</p>
+  <h2>A place, not a pinpoint</h2><p>Your ZIP code, search or location sets a starting point anywhere in the world. Dino Tracker searches about ${RADIUS} miles (160 km) around it, and up to ${WIDE} miles (400 km) when nothing turns up nearby. Results describe the wider region. They never suggest there are fossils at your address.</p>
+  <h2>Your location</h2><p>If you choose “Use my location” or tap the map, the position is rounded to about a kilometer and used only to search. It isn’t stored or shared. Place names and search come from OpenStreetMap’s Nominatim service, ZIP codes from Zippopotam.us, and map tiles from OpenStreetMap.</p>
   <h2>Why some places have no dinosaurs</h2><p>Dinosaurs only fossilize in rocks from their time, about 252 to 66 million years ago, that formed on land or near shore. Much of the eastern and central US is built from older seafloor rock, or from rock too young to hold dinosaurs. Those places show what lived there instead.</p>
+  <h2>Why the map is uneven</h2><p>The fossil record follows the people who search for it. North America, Europe, Argentina and China have been explored for well over a century, while much of Africa, South Asia and Siberia has barely been surveyed. An empty region usually means “not yet found,” not “nothing lived here.”</p>
   <h2>Footprints, eggs and birds</h2><p>Fossil tracks and eggshell are named separately from the animals that made them, so they appear in their own sections. Birds are dinosaurs too, but this guide focuses on the non-bird dinosaurs, plus a few toothed early birds from the age of dinosaurs.</p>
-  <h2>Offline</h2><p>Places you’ve looked up are saved on your device, so they still open without a connection. Elsewhere, Dino Tracker falls back to statewide records saved in October 2026.</p>
+  <h2>Offline</h2><p>Places you’ve looked up are saved on your device, so they still open without a connection. Elsewhere in the US, Dino Tracker falls back to statewide records saved in October 2026.</p>
   <h2>Illustrations and silhouettes</h2><p>Paintings are from the Dino Tracker specimen collection. Dinosaurs without a painting yet use silhouettes from PhyloPic, an open library of organism silhouettes, limited to images in the public domain or under a Creative Commons Attribution license. When there is no usable silhouette of a dinosaur itself, a close relative is shown and labeled. Silhouettes by ${artists.join(', ')}.</p></article>`;
 }
 
 document.addEventListener('click', async e => {
-  const t = e.target.closest('[data-go],[data-zip],[data-dino],[data-x]');
+  const t = e.target.closest('[data-go],[data-zip],[data-at],[data-dino],[data-x]');
   if (!t) return;
   if (t.dataset.zip) { const r = await placeFromZip(t.dataset.zip); if (!r.none) open(r); return; }
+  if (t.dataset.at) { const [lat, lng] = t.dataset.at.split(',').map(Number), r = await placeFromCoords(lat, lng); open({...r, town:t.dataset.name?.split(', ')[0] || r.town}); return; }
   if (t.dataset.dino) return go('detail', {dino: t.dataset.dino});
   if (t.dataset.x) return go('xdetail', {x: t.dataset.x});
   if (t.dataset.go === 'results' && !place) return go('home');
@@ -529,9 +624,10 @@ async function route(replace){
   const then = q.get('dino') ? 'detail' : q.get('x') ? 'xdetail' : 'results';
   current = q.get('dino'); currentX = q.get('x');
   const same = place && (zip ? place.zip === zip : `${place.lat},${place.lng}` === at);
+  if (at && !/^-?[\d.]+,-?[\d.]+$/.test(at)) return go('home', {history:false, replace});
   if (same && DATA && !DATA.error) return go(then, {history:false});
   const pl = zip ? await placeFromZip(zip) : await placeFromCoords(...at.split(',').map(Number));
-  if (pl.none || pl.outside) return go('home', {history:false, replace});
+  if (pl.none) return go('home', {history:false, replace});
   if (then === 'results') return open(pl, {history:false});
   place = pl; view = then; renderLoading(pl);
   open(pl, {then});
