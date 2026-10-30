@@ -197,6 +197,8 @@ label.f{font-weight:600;font-size:12px;line-height:15px;color:var(--ink)}
 .art:not(.pending){background:var(--paper)}
 .art .fm{position:absolute;top:14px;left:16px;font-family:var(--mono);font-size:9px;line-height:12px;letter-spacing:.04em;color:#475569;text-transform:uppercase;z-index:1}
 .art.sil{background:var(--paper)}
+.art.teeth .note{position:absolute;bottom:12px;right:14px;font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:#7c8696;text-transform:uppercase}
+.plate .art.teeth .note{display:none}
 .art .shape{width:74%;height:66%;margin-top:6px;background:var(--sil);opacity:.55;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
 .art.sil.tri{--sil:var(--tri-fg)} .art.sil.jur{--sil:var(--jur-fg)} .art.sil.cre{--sil:var(--cre-fg)} .art.sil.pal{--sil:var(--pal-fg)} .art.sil.cen{--sil:var(--cen-fg)}
 .art.sil .note{position:absolute;bottom:12px;right:14px;font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:#7c8696;text-transform:uppercase}

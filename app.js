@@ -179,9 +179,11 @@ function silFor(x){
   return f && [f[0], f[1], f[2], f[3]];
 }
 
+// Shared tooth art doesn't count as a painting when deciding who leads the list.
+const painted = g => !!ART[g] && !TEETH.includes(g);
 function sorted(list){
   const by = {
-    featured:(a,b) => (!!ART[b.g] - !!ART[a.g]) || (!!GUIDE[b.g] - !!GUIDE[a.g]) || ((a.grp === 'bird') - (b.grp === 'bird')) || b.n - a.n,
+    featured:(a,b) => (painted(b.g) - painted(a.g)) || (!!GUIDE[b.g] - !!GUIDE[a.g]) || ((a.grp === 'bird') - (b.grp === 'bird')) || b.n - a.n,
     records:(a,b) => b.n - a.n, oldest:(a,b) => b.ea - a.ea, newest:(a,b) => a.la - b.la, az:(a,b) => a.g.localeCompare(b.g),
   }[sortBy];
   return [...list].sort(by);
@@ -189,6 +191,7 @@ function sorted(list){
 
 function artBox(x, label = true){
   const fm = label && x.f[0] ? `<span class="fm">${x.f[0]} Formation</span>` : '';
+  if (TEETH.includes(x.g)) return `<div class="art teeth">${fm}<img src="art/teeth.jpg" alt="Fossil theropod teeth, the kind ${x.g} is known from" loading="lazy"><span class="note">Known from teeth</span></div>`;
   if (ART[x.g]) return `<div class="art">${fm}<img src="art/${ART[x.g]}.jpg" alt="${x.g} illustration" loading="lazy"></div>`;
   const s = silFor(x);
   if (s) return `<div class="art sil ${x.per}">${fm}<span class="shape" style="--m:url('art/sil/${s[0]}.png')" role="img" aria-label="${s[3] ? 'Silhouette of a related ' + s[3] : x.g + ' silhouette'}"></span><span class="note">${s[3] ? 'Related ' + s[3] : 'Silhouette'}</span></div>`;
@@ -358,7 +361,7 @@ const loadNames = () => loadGen().then(G => NAMES ||= [...Object.keys(G).filter(
 const kindOf = g => XNAMES[g] ? INSTEAD[XNAMES[g][0]].kind : GROUPS[GEN[g]?.[0]]?.[0] || 'Dinosaur';
 function matchNames(q){
   // Painted and well-known dinosaurs first, then the ones with the most fossil records.
-  const s = q.toLowerCase(), rank = g => (ART[g] ? -1e5 : GUIDE[g] || XNAMES[g] ? -5e4 : 0) - (GEN[g]?.[5] || 0);
+  const s = q.toLowerCase(), rank = g => (painted(g) ? -1e5 : GUIDE[g] || XNAMES[g] ? -5e4 : 0) - (GEN[g]?.[5] || 0);
   const pre = NAMES.filter(g => g.toLowerCase().startsWith(s)).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
   const mid = s.length > 2 ? NAMES.filter(g => !g.toLowerCase().startsWith(s) && g.toLowerCase().includes(s)) : [];
   const hits = [...pre, ...mid];
@@ -748,7 +751,7 @@ function renderDetail(){
     <span class="rec">${ic('pin')}Recorded ${data.dnear.replace(/ of .*$/, '')}</span></div>
   <div class="d-grid">
     <div class="plate"><span class="lbl">${G?.sci || x.g}</span>${ART[x.g] ? `<button class="expand" id="expand" aria-label="View larger">${ic('expand')}</button>` : ''}
-      ${artBox(x, false)}${ART[x.g] ? `<span class="credit">${ic('pencil')}Life reconstruction · Coloration is interpretive</span>` : silFor(x) ? `<span class="credit">${ic('pencil')}${silFor(x)[3] ? `Silhouette of a related ${silFor(x)[3]} · ` : 'Silhouette · '}${silFor(x)[1]} · ${silFor(x)[2]} · via PhyloPic</span>` : ''}</div>
+      ${artBox(x, false)}${TEETH.includes(x.g) ? `<span class="credit">${ic('pencil')}Known mainly from isolated teeth · Representative fossil teeth shown</span>` : ART[x.g] ? `<span class="credit">${ic('pencil')}Life reconstruction · Coloration is interpretive</span>` : silFor(x) ? `<span class="credit">${ic('pencil')}${silFor(x)[3] ? `Silhouette of a related ${silFor(x)[3]} · ` : 'Silhouette · '}${silFor(x)[1]} · ${silFor(x)[2]} · via PhyloPic</span>` : ''}</div>
     <aside class="glance"><span class="eyebrow">At a glance</span><h2>${G?.title || `${GROUPS[x.grp][0]} of the ${x.sub}.`}</h2><p>${G?.text || GROUP_TEXT[x.grp]}</p>
       <dl class="facts" style="margin:0"><div><dt>Dinosaur type</dt><dd>${GROUPS[x.grp][0]} · ${x.diet}</dd></div><div><dt>Lived</dt><dd>${fmtMa(x.ea, x.la)}</dd></div><div><dt>Rock record</dt><dd>${forms}</dd></div><div><dt>Records in this area</dt><dd>${x.n}</dd></div></dl></aside>
   </div>
