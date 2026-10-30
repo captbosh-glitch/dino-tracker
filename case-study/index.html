@@ -29,6 +29,7 @@ img { max-width: 100%; }
   --peri: #5b6bff; --peri-soft: #eaf0ff; --page: #f4f7ff; --card: #ffffff; --paper: #fbf7ec;
   --ink: #1f2937; --muted: #475569; --faint: #64748b; --line: #d7e3ff;
   --tri: #fce7bc; --tri-ink: #854d0e; --jur: #ccf0e5; --jur-ink: #115e59; --cre: #eaddfb; --cre-ink: #63339a;
+  --pal: #f8dccd; --pal-ink: #8f3a1c; --cen: #dcebf5; --cen-ink: #24506f;
   --display: 'Lora', Georgia, 'Times New Roman', serif;
   --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
@@ -109,6 +110,11 @@ figcaption b { color: var(--ink); }
 .p-tri { background: var(--tri); color: var(--tri-ink); }
 .p-jur { background: var(--jur); color: var(--jur-ink); }
 .p-cre { background: var(--cre); color: var(--cre-ink); }
+.p-pal { background: var(--pal); color: var(--pal-ink); }
+.p-cen { background: var(--cen); color: var(--cen-ink); }
+.periods.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.note { font-family: var(--mono); font-size: 11px; letter-spacing: .04em; color: var(--faint); margin-top: 8px; }
+@media (max-width: 720px) { .periods.five { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .periods { grid-template-columns: 1fr; } }
 
 /* headlines for places without dinosaurs */
@@ -219,8 +225,8 @@ footer a { color: var(--nav-ink); }
     </div>
     <div class="wide">
       <figure class="pair phone">
-        <div><span class="tag after">Golden, Colorado</span><img src="img/app-results.jpg" alt="Results near Golden: Meet your prehistoric neighbors, with the period filter and cards for Allosaurus, Camarasaurus and Diplodocus." width="1400" height="1100"></div>
-        <div class="shot"><span class="tag after">On a phone</span><img src="img/phone-results.jpg" alt="Phone view of the period filter near Jordan, Montana: 0 Triassic, 6 Jurassic and 31 Cretaceous dinosaurs, with a Triceratops card." width="560" height="1212"></div>
+        <div><span class="tag after">Golden, Colorado</span><img src="img/app-results.jpg" alt="Results near Golden: Meet your prehistoric neighbors, with the timeline narrowed to the Triassic, Jurassic and Cretaceous, and painted cards for Allosaurus, Camarasaurus and Diplodocus." width="1400" height="1100"></div>
+        <div class="shot"><span class="tag after">On a phone</span><img src="img/phone-results.jpg" alt="Phone view of the period filter near Jordan, Montana: 1 Paleozoic animal, 0 Triassic, 6 Jurassic and 31 Cretaceous dinosaurs, and 3 Cenozoic animals." width="560" height="1212"></div>
       </figure>
     </div>
 
@@ -239,7 +245,7 @@ footer a { color: var(--nav-ink); }
     <div class="wide">
       <figure class="pair">
         <div><img src="img/app-columbus.jpg" alt="Columbus, Ohio: Before the dinosaurs, this was a sea, with trilobites, ammonites and Dunkleosteus." width="1400" height="923"></div>
-        <div><img src="img/app-hays.jpg" alt="Hays, Kansas: Life in the inland sea, with Cretoxyrhina, a mosasaur, Pteranodon and Xiphactinus." width="1400" height="1000"></div>
+        <div><img src="img/app-hays.jpg" alt="Hays, Kansas: Life in the inland sea, with the Ginsu shark, ammonites, mosasaurs, Pteranodon and Xiphactinus." width="1400" height="1000"></div>
       </figure>
       <figcaption class="col"><b>Ohio and Kansas</b> have few or no dinosaurs, but trilobites, sea monsters and giant fish take their place.</figcaption>
     </div>
@@ -260,7 +266,7 @@ footer a { color: var(--nav-ink); }
 
     <div class="col decision">
       <span class="num">04</span><h3>Paintings for the stars, silhouettes for everyone</h3>
-      <p>I directed a specimen collection of 38 illustrations in one consistent ink-and-watercolor style: the dinosaurs people know best, plus sea creatures and Ice Age giants. Every other animal gets an open-licensed silhouette from PhyloPic, tinted in its period’s color and credited to its artist. When no silhouette of an animal exists, a close relative stands in, clearly labeled “Related ankylosaurid,” so nothing is passed off as something it isn’t.</p>
+      <p>At launch I directed a specimen collection of 38 illustrations in one consistent ink-and-watercolor style: the dinosaurs people know best, plus sea creatures and Ice Age giants. (It has since grown to 571; more on that below.) Every other animal gets an open-licensed silhouette from PhyloPic, tinted in its period’s color and credited to its artist. When no silhouette of an animal exists, a close relative stands in, clearly labeled “Related ankylosaurid,” so nothing is passed off as something it isn’t.</p>
     </div>
     <div class="wide">
       <figure><img src="img/specimens.jpg" alt="The Dino Tracker specimen collection sheet: theropods including Tyrannosaurus, Allosaurus and Deinonychus, and sauropods including Diplodocus and Brachiosaurus." width="1600" height="935">
@@ -284,8 +290,8 @@ footer a { color: var(--nav-ink); }
       </figure>
     </div>
     <div class="wide">
-      <figure><img src="img/app-gobi.jpg" alt="Results in the Gobi Desert, Mongolia: 28 dinosaurs, led by Protoceratops, Pinacosaurus and Velociraptor shown as lavender silhouettes." width="1400" height="1100">
-        <figcaption><b>The Gobi Desert:</b> Protoceratops, Velociraptor and 26 more, 160 km around Dalanzadgad, Mongolia.</figcaption></figure>
+      <figure><img src="img/app-gobi.jpg" alt="Results in the Gobi Desert, Mongolia: 27 dinosaurs of the Cretaceous, led by painted Protoceratops, Pinacosaurus and Velociraptor." width="1400" height="1100">
+        <figcaption><b>The Gobi Desert:</b> Protoceratops, Pinacosaurus, Velociraptor and 24 more, 160 km around Dalanzadgad, Mongolia.</figcaption></figure>
     </div>
 
     <div class="col decision">
@@ -311,6 +317,62 @@ footer a { color: var(--nav-ink); }
 
   <section class="gutter">
     <div class="col">
+      <p class="eyebrow">After launch</p>
+      <h2>Three ideas that came after it shipped</h2>
+      <p>Once Dino Tracker was live, I kept using it, and kept having ideas. Three of them changed the app.</p>
+    </div>
+
+    <div class="col decision">
+      <span class="num">08</span><h3>Look up a dinosaur, not just a place</h3>
+      <p>The app answered “who lived here?” but not the reverse: “where did Spinosaurus live?” A search box on the map now takes any of about 3,900 dinosaur names, or a featured animal like Dimetrodon or Mammoth, and plots every site where it has been found. It forgives typos, and suggestions put the dinosaurs people know first. Every site links back to that animal’s field guide for the area, so the map and the guide feed each other.</p>
+    </div>
+    <div class="wide">
+      <figure><img src="img/app-find.jpg" alt="The map after searching Spinosaurus: a card with its painting, 44 fossil records at 25 sites in Morocco, Egypt, Niger and 3 more countries, and navy dots across North Africa." width="1400" height="923">
+        <figcaption><b>Where Spinosaurus lived:</b> 44 fossil records at 25 sites, from Morocco to Egypt.</figcaption></figure>
+    </div>
+
+    <div class="col decision">
+      <span class="num">09</span><h3>Before and after the dinosaurs</h3>
+      <p>One of my favorite prehistoric animals is Dimetrodon, the sail-backed one, and it isn’t a dinosaur. It lived about 40 million years before the first one. I wanted it in the app, which raised a bigger question: should other eras get their own tabs?</p>
+      <p>I decided tabs were overkill. I extended the timeline instead, with a span on each side of the age of dinosaurs. I looked at a full geologic column with a dozen periods and decided it was too much detail for a slider. The last span is “Cenozoic,” not “Ice Age,” because that’s what it actually is.</p>
+      <div class="periods five" aria-label="The five spans of the timeline">
+        <div class="p-pal"><b>Paleozoic</b><span>539–252</span></div>
+        <div class="p-tri"><b>Triassic</b><span>252–201</span></div>
+        <div class="p-jur"><b>Jurassic</b><span>201–145</span></div>
+        <div class="p-cre"><b>Cretaceous</b><span>145–66</span></div>
+        <div class="p-cen"><b>Cenozoic</b><span>66–today</span></div>
+      </div>
+      <p class="note">Millions of years ago.</p>
+      <p>Sea creatures live in their real era now too: a trilobite near Cincinnati is tagged Ordovician, and a mosasaur in Kansas is tagged Late Cretaceous. Each tag comes from the ages of the fossils found nearby. Where a card used to say “Not a dinosaur” in its corner, it now names the rock formation the fossils came from, the same as on the dinosaur cards. The “Not a dinosaur” label moved to the field guide.</p>
+    </div>
+    <div class="wide">
+      <figure class="pair">
+        <div><img src="img/app-deeptime.jpg" alt="Results near Seymour, Texas, with the five-span timeline: 6 Paleozoic animals, 5 Cretaceous dinosaurs and 4 Cenozoic animals, and The sail-backs and their neighbors: Dimetrodon, Eryops, Diplocaulus and Edaphosaurus." width="1400" height="1100"></div>
+        <div><img src="img/app-dimetrodon.jpg" alt="The Dimetrodon field guide near Seymour: a Permian tag, a Not a dinosaur tag, a painting, and facts including 76 Permian records from the Vale and Arroyo Formations." width="1400" height="1000"></div>
+      </figure>
+      <figcaption class="col"><b>Seymour, Texas,</b> sits on some of the richest Permian rocks in the world. The sail-backs got here first.</figcaption>
+    </div>
+
+    <div class="col decision">
+      <span class="num">10</span><h3>From 38 paintings to 571</h3>
+      <p>Silhouettes were a good stand-in, but the paintings are what make the app feel like a field guide. After launch I kept painting, in batches of up to 100 per sheet, with the same ink-and-watercolor style.</p>
+      <p>The hard part was picking which ones. The database lists about 3,900 dinosaur names, and most of them are known from only one or two finds. Ranking by how common a dinosaur is worldwide sent Argentina’s local stars to the bottom of the list. So we ranked by where people actually look instead: every dinosaur at the app’s sample places first, then the ones that turn up across several regions. Early birds were left as silhouettes on purpose, since the app lists them last anyway. Some animals are known only from a tooth or a few bones, and their plates show exactly that.</p>
+      <div class="stats">
+        <div><b>571</b><span>paintings, up from 38 at launch</span></div>
+        <div><b>11 / 11</b><span>sample places where every dinosaur except early birds is painted</span></div>
+        <div><b>7 → 83</b><span>painted dinosaurs around Neuquén, Argentina, out of 86</span></div>
+      </div>
+    </div>
+    <div class="wide">
+      <figure><img src="img/collection.jpg" alt="A sample of the specimen collection: Dimetrodon, Spinosaurus, Velociraptor, Megalodon, a clutch of fossil eggs, a sea scorpion, Therizinosaurus, Argentinosaurus and more, all in ink and watercolor." width="1600" height="453">
+        <figcaption><b>A few of the 571.</b> Dinosaurs, a sea scorpion, Megalodon, a nest of eggs, and a plate of bones for an animal known only from fragments.</figcaption></figure>
+      <figure><img src="img/app-drumheller.jpg" alt="Results near Drumheller, Alberta: Dinosaurs of the Cretaceous, all painted, including Edmontosaurus, Tyrannosaurus, Triceratops, Centrosaurus and Saurornitholestes." width="1400" height="1100">
+        <figcaption><b>Drumheller, Alberta:</b> every one of its 68 dinosaurs now has a painting.</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="gutter">
+    <div class="col">
       <p class="eyebrow">Process</p>
       <h2>From sketch to the whole planet</h2>
       <ol class="steps">
@@ -319,6 +381,9 @@ footer a { color: var(--nav-ink); }
         <li><b>The specimen collection</b><span>Three illustration sheets, cut into 38 paintings, plus silhouettes for everything else.</span></li>
         <li><b>A real web app</b><span>Live fossil records for any US place, GPS, shareable links and offline support.</span></li>
         <li><b>Going global</b><span>Place search, a world map of fossil finds and kilometers, with over 100 more silhouettes.</span></li>
+        <li><b>Animal search</b><span>Look up any dinosaur and see every place it has been found.</span></li>
+        <li><b>Deep time</b><span>A five-span timeline, from the Paleozoic sea to the Cenozoic, with Dimetrodon and friends.</span></li>
+        <li><b>571 paintings</b><span>Eleven more sheets, painted in the order people will see them.</span></li>
       </ol>
     </div>
   </section>
@@ -328,8 +393,8 @@ footer a { color: var(--nav-ink); }
       <p class="eyebrow">Collaboration</p>
       <h2>Working with Claude</h2>
       <div class="split">
-        <div><h3>My calls</h3><ul><li>The concept and the time-travel twist</li><li>The Figma mockups, palette and logo</li><li>The specimen illustrations and their style</li><li>Taking it global with a map</li></ul></div>
-        <div><h3>Claude’s work</h3><ul><li>Design critique against real data</li><li>The prototype and the web app</li><li>Fossil records, silhouettes and the map</li><li>Checking every screen at phone size</li></ul></div>
+        <div><h3>My calls</h3><ul><li>The concept and the time-travel twist</li><li>The Figma mockups, palette and logo</li><li>The specimen illustrations and their style</li><li>Taking it global with a map</li><li>Animal search and the deep-time timeline</li></ul></div>
+        <div><h3>Claude’s work</h3><ul><li>Design critique against real data</li><li>The prototype and the web app</li><li>Fossil records, silhouettes and the map</li><li>A painting priority list based on where people look</li><li>Cutting and fitting every painting</li><li>Checking every screen at phone size</li></ul></div>
       </div>
     </div>
   </section>
@@ -339,7 +404,6 @@ footer a { color: var(--nav-ink); }
       <p class="eyebrow">Next</p>
       <h2>Where it goes from here</h2>
       <ul>
-        <li><b>More paintings</b> for the dinosaurs people see most outside the US, starting with Spinosaurus, Velociraptor, Protoceratops and Iguanodon.</li>
         <li><b>Where your town was.</b> The continents have moved. A small globe could show where your spot sat 150 million years ago.</li>
         <li><b>Museums and dig sites</b> near every place, to turn a search into a day out.</li>
         <li><b>Review by a paleontologist,</b> and testing with kids, parents and teachers.</li>
