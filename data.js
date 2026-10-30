@@ -16,7 +16,19 @@ const ART = Object.fromEntries(['Stegosaurus','Allosaurus','Diplodocus','Apatosa
   'Compsognathus','Ornitholestes','Microvenator','Tanycolagreus','Hesperonychus','Lufengosaurus','Lambeosaurus','Yunnanosaurus','Sinosaurus',
   'Stenonychosaurus','Scelidosaurus','Citipes','Pakisaurus','Syntarsus','Microraptor','Ferenceratops','Asiaceratops','Aegyptosaurus',
   'Anchiceratops','Atlascopcosaurus','Zapsalis','Platypelta','Mononykus','Owenodon','Deltadromeus','Ornithopsis','Echinodon',
-  'Appalachiosaurus','Galeamopus','Gobihadros','Anzu'].map(g => [g, g.toLowerCase()]));
+  'Appalachiosaurus','Galeamopus','Gobihadros','Anzu',
+  'Segnosaurus','Bahariasaurus','Rebbachisaurus','Saichania','Supersaurus','Barilium','Sarcosaurus','Yangchuanosaurus','Elaphrosaurus',
+  'Gargantuavis','Krzyzanowskisaurus','Incisivosaurus','Sinovenator','Chungkingosaurus','Australovenator','Brontotholus','Nodosaurus','Avaceratops',
+  'Spinostropheus','Acheroraptor','Claosaurus','Variraptor','Pyroraptor','Osmakasaurus','Mymoorapelta','Losillasaurus','Muttaburrasaurus',
+  'Gresslyosaurus','Amphicoelias','Marshosaurus','Montanoceratops','Talarurus','Oviraptor','Parahesperornis','Afrovenator','Pelorosaurus',
+  'Nemegtosaurus','Majungasaurus','Scutellosaurus','Telmatosaurus','Dicraeosaurus','Agujaceratops','Eolambia','Saraikimasoom','Herrerasaurus',
+  'Glyptodontopelta','Styracosaurus','Lesothosaurus','Melanorosaurus','Archaeopteryx','Utahceratops','Oryctodromeus','Caenagnathus','Sauropus',
+  'Vitakridrinda','Pararhabdodon','Caenagnathasia','Martinavis','Limaysaurus','Atrociraptor','Diamantinasaurus','Kwanasaurus','Shunosaurus',
+  'Deinocheirus','Rapetosaurus','Oohkotokia','Anchisaurus','Lourinhasaurus','Gongbusaurus','Xenovenator','Bistahieversor','Protohadros',
+  'Enantiornis','Eucnemesaurus','Leaellynasaura','Sinosauropteryx','Rocasaurus','Colepiocephale','Zephyrosaurus','Fruitadens','Elmisaurus',
+  'Tarchia','Saturnalia','Shuvuuia','Archaeoceratops','Mandschurosaurus','Cedarosaurus','Parksosaurus','Archaeornithomimus','Megaraptor',
+  'Wuerhosaurus','Tienshanosaurus','Ahshislesaurus','Cerasinops','Nemegtomaia','Zhyraornis','Nigersaurus','Arrhinoceratops','Cathayornis',
+  'Longipteryx'].map(g => [g, g.toLowerCase()]));
 // Dinosaurs known almost entirely from isolated teeth. Those without their own painting share the fossil-teeth plate.
 const TEETH = ['Richardoestesia','Paronychodon','Pectinodon','Zapsalis'];
 for (const g of TEETH) ART[g] ||= 'teeth';
