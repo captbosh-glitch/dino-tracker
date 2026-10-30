@@ -939,7 +939,7 @@ async function renderNews(){
       <div class="stories vrow">${vids.filter((v, i) => vids.findIndex(w => w.channel === v.channel) === i).slice(0, 3).map(videoCard).join('')}</div></section>` : ''}
     <div class="stories" data-show="stories">${all.filter(s => s !== lead).map(s => storyCard(s)).join('')}</div>
     <div class="stories" data-show="video" hidden>${vids.map(videoCard).join('')}</div>
-    <div class="foot-note">${ic('info')}<span>Stories from the last 30 days, from ScienceDaily, Phys.org, Live Science and outlets found through Google News. Videos come from PBS Eons, Ancient Planet and Stellar, and play on YouTube. Dino Tracker shows each headline and summary and links to the full story; the reporting belongs to its publisher.</span></div>`;
+    <div class="foot-note">${ic('info')}<span>Stories from the last 30 days, from ScienceDaily, Phys.org, Live Science and outlets found through Google News. Videos come from PBS Eons, Ancient Planet, Stellar and Proper Prehistoric, and play on YouTube. Dino Tracker shows each headline and summary and links to the full story; the reporting belongs to its publisher.</span></div>`;
   body.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => {
     const f = b.dataset.f;
     body.querySelectorAll('.filters [data-f]').forEach(x => x.setAttribute('aria-pressed', x.dataset.f === f));

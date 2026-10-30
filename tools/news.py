@@ -70,8 +70,10 @@ CHANNELS = {
     'UCzR-rom72PHN9Zg7RML9EbA': ('PBS Eons', True),
     'UC5bjeIaPZwI-uof6sNbfmpg': ('Ancient Planet', False),
     'UCNSbgDRlAHM55EXMxEKPrmg': ('Stellar', False),
+    'UCxY9delvwL5nVRbSd3xVFGw': ('Proper Prehistoric', False),
 }
-VIDEO_DAYS = 90
+# Documentaries don't go stale like news, and some channels post long videos only a few times a year.
+VIDEO_DAYS = 730
 DEEP = re.compile(r'dinosaur|prehistoric|fossil|paleo|jurassic|cretaceous|triassic|permian|carboniferous|devonian|silurian'
                   r'|ordovician|cambrian|ediacaran|pangaea|gondwana|rodinia|panthalassa|(?:million|billion) years|extinct'
                   r'|mammoth|mastodon|megafauna|sabre|saber|pterosaur|plesiosaur|ichthyosaur|mosasaur|trilobite|ammonite'
@@ -89,7 +91,7 @@ def videos(now):
     ns = {'a': 'http://www.w3.org/2005/Atom', 'yt': 'http://www.youtube.com/xml/schemas/2015',
           'm': 'http://search.yahoo.com/mrss/'}
     cutoff = (now - timedelta(days=VIDEO_DAYS)).strftime('%Y-%m-%dT%H:%M:%SZ')
-    out = []
+    out, titles = [], set()
     for cid, (channel, trusted) in CHANNELS.items():
         try:
             req = urllib.request.Request('https://www.youtube.com/feeds/videos.xml?channel_id=' + cid, headers={'User-Agent': UA})
@@ -101,9 +103,16 @@ def videos(now):
             vid, title = e.findtext('yt:videoId', '', ns), html.unescape(e.findtext('a:title', '', ns))
             desc = html.unescape(e.findtext('m:group/m:description', '', ns))
             published = e.findtext('a:published', '', ns)[:19] + 'Z'
+            # Shorts are vertical clips that crop badly in a wide card, and channels repost them often.
+            link = (e.find('a:link', ns).get('href') if e.find('a:link', ns) is not None else '')
+            # A video posted twice (a re-upload, a 4K version) shows once: the feed is newest first, so the newest copy wins.
+            key = re.sub(r'\W+', ' ', re.sub(r'\[.*?\]|\(.*?\)', '', title)).strip().lower()
+            if '/shorts/' in link or key in titles:
+                continue
             if not vid or published < cutoff or PEOPLE.search(title) or not (trusted or DEEP.search(title + ' ' + desc[:400])):
                 continue
             per = next(((name, p) for pat, name, p in PERIODS if re.search(pat, title, re.I)), None)
+            titles.add(key)
             out.append({'id': vid, 'title': title, 'channel': channel, 'published': published,
                         'url': 'https://www.youtube.com/watch?v=' + vid, 'about': dinos_in(title),
                         'age': per[0] if per else None, 'per': per[1] if per else None})
