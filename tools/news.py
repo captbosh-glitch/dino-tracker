@@ -4,7 +4,7 @@ Collects fossil news for the News page (built on the Playoff Beard collector).
 Reads the feeds below, keeps fossil stories from the last 30 days, groups the same story
 from different outlets, and tags each with the animals it names:
   data/news-articles.json  every article seen in the last 30 days (the collector's memory)
-  data/news.json           the grouped stories the app reads
+  data/news.json           the grouped stories the app reads, plus the latest videos from a few YouTube channels
 Run it with `python3 tools/news.py`. It needs only the Python standard library.
 """
 import hashlib, html, json, os, re, sys, urllib.request
@@ -61,6 +61,54 @@ AGES = [(538.8, 'Cambrian', 'pal'), (485.4, 'Ordovician', 'pal'), (443.8, 'Silur
         (145, 'Early Cretaceous', 'cre'), (100.5, 'Late Cretaceous', 'cre'), (66, 'Paleocene', 'cen'), (56, 'Eocene', 'cen'),
         (33.9, 'Oligocene', 'cen'), (23.03, 'Miocene', 'cen'), (5.33, 'Pliocene', 'cen'), (2.58, 'Pleistocene', 'cen')]
 AGE = re.compile(r'(\d[\d,.]*)[- ](billion|million|thousand)?[- ]?years?[- ](?:old|ago)', re.I)
+
+
+# YouTube channels, by channel ID (the channel page's About panel: Share channel > Copy channel ID).
+# Their official feeds list each channel's 15 latest videos. trusted: a paleontology channel whose teaser
+# titles ("They were the first reptiles to return to the water") pass without deep-time words.
+CHANNELS = {
+    'UCzR-rom72PHN9Zg7RML9EbA': ('PBS Eons', True),
+    'UC5bjeIaPZwI-uof6sNbfmpg': ('Ancient Planet', False),
+    'UCNSbgDRlAHM55EXMxEKPrmg': ('Stellar', False),
+}
+VIDEO_DAYS = 90
+DEEP = re.compile(r'dinosaur|prehistoric|fossil|paleo|jurassic|cretaceous|triassic|permian|carboniferous|devonian|silurian'
+                  r'|ordovician|cambrian|ediacaran|pangaea|gondwana|rodinia|panthalassa|(?:million|billion) years|extinct'
+                  r'|mammoth|mastodon|megafauna|sabre|saber|pterosaur|plesiosaur|ichthyosaur|mosasaur|trilobite|ammonite'
+                  r'|megalodon|ice age|t\. ?rex|raptor|sauropod|feathered', re.I)
+# Videos about people rather than deep time. "Before Humans Ruled Earth" is still deep time.
+PEOPLE = re.compile(r'(?<!before )\bhumans?\b|stone age|ancestors|neandert[h]?al|denisovan|homo |hominin|archaeolog|civili[sz]ation', re.I)
+PERIODS = [(r'cambrian', 'Cambrian', 'pal'), (r'ordovician', 'Ordovician', 'pal'), (r'silurian', 'Silurian', 'pal'),
+           (r'devonian', 'Devonian', 'pal'), (r'carboniferous', 'Carboniferous', 'pal'), (r'permian', 'Permian', 'pal'),
+           (r'triassic|carnian', 'Triassic', 'tri'), (r'jurassic', 'Jurassic', 'jur'), (r'cretaceous', 'Cretaceous', 'cre'),
+           (r'paleogene|paleocene|eocene', 'Paleogene', 'cen'), (r'ice age|pleistocene|mammoth', 'Ice Age', 'cen')]
+
+
+def videos(now):
+    """The latest deep-time videos from the channels above, newest first."""
+    ns = {'a': 'http://www.w3.org/2005/Atom', 'yt': 'http://www.youtube.com/xml/schemas/2015',
+          'm': 'http://search.yahoo.com/mrss/'}
+    cutoff = (now - timedelta(days=VIDEO_DAYS)).strftime('%Y-%m-%dT%H:%M:%SZ')
+    out = []
+    for cid, (channel, trusted) in CHANNELS.items():
+        try:
+            req = urllib.request.Request('https://www.youtube.com/feeds/videos.xml?channel_id=' + cid, headers={'User-Agent': UA})
+            root = ET.fromstring(urllib.request.urlopen(req, timeout=20).read())
+        except Exception as e:
+            print(f'  {channel}: {e}', file=sys.stderr)
+            continue
+        for e in root.findall('a:entry', ns):
+            vid, title = e.findtext('yt:videoId', '', ns), html.unescape(e.findtext('a:title', '', ns))
+            desc = html.unescape(e.findtext('m:group/m:description', '', ns))
+            published = e.findtext('a:published', '', ns)[:19] + 'Z'
+            if not vid or published < cutoff or PEOPLE.search(title) or not (trusted or DEEP.search(title + ' ' + desc[:400])):
+                continue
+            per = next(((name, p) for pat, name, p in PERIODS if re.search(pat, title, re.I)), None)
+            out.append({'id': vid, 'title': title, 'channel': channel, 'published': published,
+                        'url': 'https://www.youtube.com/watch?v=' + vid, 'about': dinos_in(title),
+                        'age': per[0] if per else None, 'per': per[1] if per else None})
+    out.sort(key=lambda v: v['published'], reverse=True)
+    return out
 
 
 def load_names():
@@ -260,9 +308,10 @@ def main():
     articles.sort(key=lambda a: a['published'], reverse=True)
     stories = group(articles)
     json.dump(articles, open(RAW, 'w', encoding='utf-8'), ensure_ascii=False, indent=0)
-    json.dump({'updated': now.strftime('%Y-%m-%dT%H:%M:%SZ'), 'stories': stories},
+    vids = videos(now)
+    json.dump({'updated': now.strftime('%Y-%m-%dT%H:%M:%SZ'), 'stories': stories, 'videos': vids},
               open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
-    print(f'{len(articles)} articles, {len(stories)} stories, {sum(1 for s in stories if s["about"])} name a dinosaur')
+    print(f'{len(articles)} articles, {len(stories)} stories, {sum(1 for s in stories if s["about"])} name a dinosaur, {len(vids)} videos')
 
 
 if __name__ == '__main__':

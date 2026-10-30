@@ -903,6 +903,17 @@ function storyCard(s, lead = false){
     ${guides ? `<div class="links">${guides}</div>` : ''}</div></article>`;
 }
 
+// A video opens on YouTube in a new tab; nothing plays on Dino Tracker. The thumbnail is YouTube's own still.
+function videoCard(v){
+  const thumb = `https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/hqdefault.jpg`;
+  const guides = (v.about || []).filter(g => GEN?.[g] || ART[g]).slice(0, 2).map(g => `<a class="dino" href="?find=${encodeURIComponent(g)}" data-find="${safe(g)}">${ic('map')}Where ${safe(g)} lived</a>`).join('');
+  return `<article class="nstory vcard"><a class="pic vid" href="${safeUrl(v.url)}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">
+      <img src="${thumb}" alt="" loading="lazy" onerror="this.remove()"><span class="play"></span></a><div class="body">
+    <div class="src">${safe(v.channel)} · ${newsDate(v.published)}</div>${v.age ? `<div class="row"><span class="tag ${v.per}">${safe(v.age)}</span></div>` : ''}
+    <h3>${outLink(v.url, safe(v.title), 'hl')}</h3><span class="yt">Watch on YouTube</span>
+    ${guides ? `<div class="links">${guides}</div>` : ''}</div></article>`;
+}
+
 async function renderNews(){
   app.innerHTML = `<div class="news"><div class="newshead"><span class="eyebrow">Field notes · Updated every few hours</span><h1>Fresh from the dig.</h1>
     <p>The latest fossil discoveries from science news. When a story names an animal in the field guide, it links straight to it. Headlines open on the publisher’s site in a new tab.</p></div>
@@ -915,16 +926,27 @@ async function renderNews(){
   // Lead with the most widely covered story of the past week; the rest follow, newest first.
   const week = all.filter(s => Date.now() - Date.parse(s.latest) < 7 * 864e5);
   const lead = (week.length ? week : all).reduce((a, s) => s.more.length > a.more.length ? s : a);
+  // The row on the main view takes each channel's newest video, so one busy channel can't fill it.
+  const vids = n.videos || [];
   body.innerHTML = `<div class="filters" role="group" aria-label="Filter stories">
       <button class="chip" aria-pressed="true" data-f="all">All<span>${all.length}</span></button>
       <button class="chip" aria-pressed="false" data-f="dino">Dinosaurs<span>${count('dino')}</span></button>
       <button class="chip" aria-pressed="false" data-f="beyond">Beyond dinosaurs<span>${count('beyond')}</span></button>
+      ${vids.length ? `<button class="chip" aria-pressed="false" data-f="video">Videos<span>${vids.length}</span></button>` : ''}
       <span class="updated">Updated ${new Date(n.updated).toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}</span></div>
-    ${storyCard(lead, true)}<div class="stories">${all.filter(s => s !== lead).map(s => storyCard(s)).join('')}</div>
-    <div class="foot-note">${ic('info')}<span>Stories from the last 30 days, from ScienceDaily, Phys.org, Live Science and outlets found through Google News. Dino Tracker shows each headline and summary and links to the full story; the reporting belongs to its publisher.</span></div>`;
+    ${storyCard(lead, true)}
+    ${vids.length ? `<section class="watch" data-show="all"><div class="whead"><h2>New to watch</h2><button class="more" data-f="video">See all ${vids.length} videos${ic('arrow')}</button></div>
+      <div class="stories vrow">${vids.filter((v, i) => vids.findIndex(w => w.channel === v.channel) === i).slice(0, 3).map(videoCard).join('')}</div></section>` : ''}
+    <div class="stories" data-show="stories">${all.filter(s => s !== lead).map(s => storyCard(s)).join('')}</div>
+    <div class="stories" data-show="video" hidden>${vids.map(videoCard).join('')}</div>
+    <div class="foot-note">${ic('info')}<span>Stories from the last 30 days, from ScienceDaily, Phys.org, Live Science and outlets found through Google News. Videos come from PBS Eons, Ancient Planet and Stellar, and play on YouTube. Dino Tracker shows each headline and summary and links to the full story; the reporting belongs to its publisher.</span></div>`;
   body.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => {
-    body.querySelectorAll('[data-f]').forEach(x => x.setAttribute('aria-pressed', x === b));
-    body.querySelectorAll('.nstory').forEach(s => s.hidden = b.dataset.f !== 'all' && s.dataset.k !== b.dataset.f);
+    const f = b.dataset.f;
+    body.querySelectorAll('.filters [data-f]').forEach(x => x.setAttribute('aria-pressed', x.dataset.f === f));
+    body.querySelectorAll('.nstory:not(.vcard)').forEach(s => s.hidden = f === 'video' || (f !== 'all' && s.dataset.k !== f));
+    body.querySelector('[data-show="all"]')?.toggleAttribute('hidden', f !== 'all');
+    body.querySelector('[data-show="video"]').hidden = f !== 'video';
+    if (b.classList.contains('more')) body.querySelector('.filters').scrollIntoView({behavior: 'smooth', block: 'start'});
   }));
 }
 
