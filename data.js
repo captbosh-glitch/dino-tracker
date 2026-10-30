@@ -50,7 +50,17 @@ const ART = Object.fromEntries(['Stegosaurus','Allosaurus','Diplodocus','Apatosa
   'Vectidromeus','Vectipelta','Comptonatus','Caletodraco','Istiorachis','Invictibellatrix','Dromiceiomimus','Foraminacephale','Latenivenatrix',
   'Scolosaurus','Albertavenator','Coronosaurus','Albertonykus','Thanatotheristes','Dyoplosaurus','Rativates','Unescoceratops','Eotriceratops',
   'Spinops','Epichirostenotes','Apatoraptor','Eopinacosaurus','Fenestrosaurus','Ovoraptor','Archaeornithoides','Quaesitosaurus','Shanag',
-  'Mahakala','Gobivenator','Plesiohadros','Aepyornithomimus','Abdarainurus','Beg','Smitanosaurus','Maraapunisaurus','Hypsirophus'].map(g => [g, g.toLowerCase()]));
+  'Mahakala','Gobivenator','Plesiohadros','Aepyornithomimus','Abdarainurus','Beg','Smitanosaurus','Maraapunisaurus','Hypsirophus',
+  'Niobrarasaurus','Silvisaurus','Suuwassea','Platytholus','Qaikshaheen','Alioramus','Savannasaurus','Galleonosaurus','Imrankhanhero',
+  'Vitakrisaurus','Ikqaumishan','Segisaurus','Shamosaurus','Blikanasaurus','Fukuiraptor','Timimus','Barsboldia','Conchoraptor',
+  'Sinornithoides','Nanshiungosaurus','Sinraptor','Dracovenator','Amurosaurus','Kerberosaurus','Kunbarrasaurus','Paralititan','Hoplitosaurus',
+  'Sarcolestes','Loricatosaurus','Chindesaurus','Miragaia','Gondwanatitan','Anserimimus','Mussaurus','Nothronychus','Jaxartosaurus',
+  'Labocania','Heyuannia','Neimongosaurus','Yandusaurus','Tastavinsaurus','Chilantaisaurus','Erketu','Gobisaurus','Homalocephale',
+  'Therizinosaurus','Auroraceratops','Ignavusaurus','Haya','Acristavus','Nyasasaurus','Khankhuuluu','Dreadnoughtus','Shri',
+  'Coahuilasaurus','Gremlin','Giraffatitan','Masiakasaurus','Kentrosaurus','Balochisaurus','Magyarosaurus','Malawisaurus','Tornieria',
+  'Gspsaurus','Nodocephalosaurus','Turanoceratops','Ojoceratops','Sulaimanisaurus','Efraasia','Tanius','Turiasaurus','Marisaurus',
+  'Itemirus','Lewisuchus','Patagosaurus','Sibirotitan','Baurutitan','Tsintaosaurus','Magnapaulia','Lamplughsaura','Asilisaurus',
+  'Khetranisaurus','Mbiresaurus'].map(g => [g, g.toLowerCase()]));
 // Dinosaurs known almost entirely from isolated teeth. Those without their own painting share the fossil-teeth plate.
 const TEETH = ['Richardoestesia','Paronychodon','Pectinodon','Zapsalis'];
 for (const g of TEETH) ART[g] ||= 'teeth';
