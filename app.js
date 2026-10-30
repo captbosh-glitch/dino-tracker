@@ -180,7 +180,7 @@ function silFor(x){
 }
 
 // Shared tooth art doesn't count as a painting when deciding who leads the list.
-const painted = g => !!ART[g] && !TEETH.includes(g);
+const painted = g => !!ART[g] && ART[g] !== 'teeth';
 function sorted(list){
   const by = {
     featured:(a,b) => (painted(b.g) - painted(a.g)) || (!!GUIDE[b.g] - !!GUIDE[a.g]) || ((a.grp === 'bird') - (b.grp === 'bird')) || b.n - a.n,
@@ -191,7 +191,7 @@ function sorted(list){
 
 function artBox(x, label = true){
   const fm = label && x.f[0] ? `<span class="fm">${x.f[0]} Formation</span>` : '';
-  if (TEETH.includes(x.g)) return `<div class="art teeth">${fm}<img src="art/teeth.jpg" alt="Fossil theropod teeth, the kind ${x.g} is known from" loading="lazy"><span class="note">Known from teeth</span></div>`;
+  if (ART[x.g] === 'teeth') return `<div class="art teeth">${fm}<img src="art/teeth.jpg" alt="Fossil theropod teeth, the kind ${x.g} is known from" loading="lazy"><span class="note">Known from teeth</span></div>`;
   if (ART[x.g]) return `<div class="art">${fm}<img src="art/${ART[x.g]}.jpg" alt="${x.g} illustration" loading="lazy"></div>`;
   const s = silFor(x);
   if (s) return `<div class="art sil ${x.per}">${fm}<span class="shape" style="--m:url('art/sil/${s[0]}.png')" role="img" aria-label="${s[3] ? 'Silhouette of a related ' + s[3] : x.g + ' silhouette'}"></span><span class="note">${s[3] ? 'Related ' + s[3] : 'Silhouette'}</span></div>`;
@@ -751,7 +751,7 @@ function renderDetail(){
     <span class="rec">${ic('pin')}Recorded ${data.dnear.replace(/ of .*$/, '')}</span></div>
   <div class="d-grid">
     <div class="plate"><span class="lbl">${G?.sci || x.g}</span>${ART[x.g] ? `<button class="expand" id="expand" aria-label="View larger">${ic('expand')}</button>` : ''}
-      ${artBox(x, false)}${TEETH.includes(x.g) ? `<span class="credit">${ic('pencil')}Known mainly from isolated teeth · Representative fossil teeth shown</span>` : ART[x.g] ? `<span class="credit">${ic('pencil')}Life reconstruction · Coloration is interpretive</span>` : silFor(x) ? `<span class="credit">${ic('pencil')}${silFor(x)[3] ? `Silhouette of a related ${silFor(x)[3]} · ` : 'Silhouette · '}${silFor(x)[1]} · ${silFor(x)[2]} · via PhyloPic</span>` : ''}</div>
+      ${artBox(x, false)}${ART[x.g] === 'teeth' ? `<span class="credit">${ic('pencil')}Known mainly from isolated teeth · Representative fossil teeth shown</span>` : TEETH.includes(x.g) ? `<span class="credit">${ic('pencil')}Life reconstruction · Known mainly from teeth, so its look is a best guess</span>` : ART[x.g] ? `<span class="credit">${ic('pencil')}Life reconstruction · Coloration is interpretive</span>` : silFor(x) ? `<span class="credit">${ic('pencil')}${silFor(x)[3] ? `Silhouette of a related ${silFor(x)[3]} · ` : 'Silhouette · '}${silFor(x)[1]} · ${silFor(x)[2]} · via PhyloPic</span>` : ''}</div>
     <aside class="glance"><span class="eyebrow">At a glance</span><h2>${G?.title || `${GROUPS[x.grp][0]} of the ${x.sub}.`}</h2><p>${G?.text || GROUP_TEXT[x.grp]}</p>
       <dl class="facts" style="margin:0"><div><dt>Dinosaur type</dt><dd>${GROUPS[x.grp][0]} · ${x.diet}</dd></div><div><dt>Lived</dt><dd>${fmtMa(x.ea, x.la)}</dd></div><div><dt>Rock record</dt><dd>${forms}</dd></div><div><dt>Records in this area</dt><dd>${x.n}</dd></div></dl></aside>
   </div>

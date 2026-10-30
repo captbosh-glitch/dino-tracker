@@ -1,6 +1,6 @@
 // Dino Tracker service worker: keeps the app, its reference data and the art it has shown on the device,
 // so places you've already looked up still open without a connection.
-const VERSION = 'dt-shell-v11';
+const VERSION = 'dt-shell-v12';
 const MEDIA = 'dt-media-v1';
 const SHELL = [
   './', 'index.html', 'app.css', 'app.js', 'data.js', 'manifest.webmanifest',
