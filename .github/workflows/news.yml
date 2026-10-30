@@ -2,11 +2,11 @@ name: Collect fossil news
 
 on:
   schedule:
-    - cron: '23 */3 * * *'   # every three hours, at :23
+    - cron: '17 */3 * * *'   # every three hours, at :17
   workflow_dispatch: {}       # run it by hand from the Actions tab
   push:
     branches: [main]
-    paths: ['tools/news.py']
+    paths: ['tools/news.py', '.github/workflows/news.yml']
 
 permissions:
   contents: write

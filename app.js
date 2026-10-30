@@ -838,6 +838,21 @@ function loadNews(){
     .then(j => (NEWS = j)).catch(() => { newsReady = null; return null; });
 }
 const recent = s => Date.now() - Date.parse(s.latest) < NEWS_DAYS * 864e5;
+// The red count on the News tab: stories this browser hasn't seen on the News page yet.
+// Seen stories are remembered by headline link, and a story still counts as seen if its lead headline changes later.
+const urlsOf = s => [s.url, ...(s.more || []).map(m => m.url)];
+function newsCount(){
+  const btn = document.getElementById('nav-news');
+  if (!btn) return;
+  if (!NEWS) return loadNews().then(n => n && newsCount());
+  const seen = store.get('dt-news-seen'), live = NEWS.stories.filter(recent);
+  const fresh = view === 'news' ? [] : seen
+    ? live.filter(s => !urlsOf(s).some(u => seen.includes(u)))
+    : live.filter(s => Date.now() - Date.parse(s.first) < 3 * 864e5);
+  if (view === 'news') store.set('dt-news-seen', live.map(s => s.url));
+  btn.querySelector('.navcount')?.remove();
+  if (fresh.length) btn.insertAdjacentHTML('beforeend', `<span class="navcount" aria-label="${fresh.length} new ${fresh.length === 1 ? 'story' : 'stories'}">${fresh.length > 9 ? '9+' : fresh.length}</span>`);
+}
 // Cards for animals with a story in the last fortnight get a badge. They keep their place in the list.
 function badgeCards(){
   if (!NEWS) return loadNews().then(n => n && view === 'results' && badgeCards());
@@ -894,6 +909,7 @@ async function renderNews(){
     <div id="newsbody"><p class="muted">Loading the latest stories…</p></div></div>`;
   const n = await loadNews(), body = document.getElementById('newsbody');
   if (view !== 'news' || !body) return;
+  newsCount();
   if (!n?.stories?.length) { body.innerHTML = `<div class="notice"><div><b>The news isn’t available right now.</b> Check your connection and try again.</div></div>`; return; }
   const all = n.stories, count = k => all.filter(s => s.kind === k).length;
   // Lead with the most widely covered story of the past week; the rest follow, newest first.
@@ -981,5 +997,6 @@ async function route(replace){
 }
 window.addEventListener('popstate', () => route());
 route(true);
+setTimeout(newsCount, 600);
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');

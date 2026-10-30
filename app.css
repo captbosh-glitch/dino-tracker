@@ -37,6 +37,8 @@ h1,h2,h3{font-family:var(--display);font-weight:400;text-wrap:balance;margin:0;c
 .brand .tagline{font-family:var(--mono);font-weight:500;font-size:18px;line-height:23px;letter-spacing:.06em;color:var(--nav-ink)}
 .nav{display:flex;align-items:center;gap:32px}
 .nav button{background:none;border:0;cursor:pointer;color:var(--nav-ink);padding:4px 0;font-size:14px;line-height:17px}
+.nav button{position:relative}
+.navcount{position:absolute;top:-7px;right:-15px;min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:#e5484d;color:#fff;font-size:10.5px;line-height:17px;font-weight:700;text-align:center;box-sizing:border-box;box-shadow:0 0 0 2px var(--navy)}
 .nav button[aria-current="page"]{color:var(--nav-active);font-weight:600}
 .mast .nav .pill{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;background:var(--pill);color:#5b6bff;border-radius:100px;padding:10px 14px;font-size:12px;line-height:15px;font-weight:500}
 
