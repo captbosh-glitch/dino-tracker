@@ -10,7 +10,13 @@ const ART = Object.fromEntries(['Stegosaurus','Allosaurus','Diplodocus','Apatosa
   'Polacanthus','Neuquensaurus','Monoclonius','Omeisaurus','Hypsilophodon','Hylaeosaurus','Pectinodon','Duriatitan','Isisaurus',
   'Aeolosaurus','Sphaerotholus','Kritosaurus','Pachyrhinosaurus','Prosaurolophus','Valdosaurus','Lirainosaurus','Baptornis','Leptorhynchos',
   'Orodromeus','Gobipteryx','Ouranosaurus','Leptoceratops','Nanotyrannus','Arcovenator','Brodavis','Zalmoxes','Hypacrosaurus',
-  'Corythosaurus','Chasmosaurus','Phuwiangosaurus','Pentaceratops','Anodontosaurus','Gyposaurus','Hypselospinus'].map(g => [g, g.toLowerCase()]));
+  'Corythosaurus','Chasmosaurus','Phuwiangosaurus','Pentaceratops','Anodontosaurus','Gyposaurus','Hypselospinus',
+  'Brachylophosaurus','Bactrosaurus','Hesperosaurus','Erectopus','Vagaceratops','Nuthetes','Heterodontosaurus','Wintonotitan','Sauroposeidon',
+  'Prenocephale','Stokesosaurus','Urbacodon','Trierarchuncus','Liliensternus','Euhelopus','Shantungosaurus','Lycorhinus','Ampelosaurus',
+  'Compsognathus','Ornitholestes','Microvenator','Tanycolagreus','Hesperonychus','Lufengosaurus','Lambeosaurus','Yunnanosaurus','Sinosaurus',
+  'Stenonychosaurus','Scelidosaurus','Citipes','Pakisaurus','Syntarsus','Microraptor','Ferenceratops','Asiaceratops','Aegyptosaurus',
+  'Anchiceratops','Atlascopcosaurus','Zapsalis','Platypelta','Mononykus','Owenodon','Deltadromeus','Ornithopsis','Echinodon',
+  'Appalachiosaurus','Galeamopus','Gobihadros','Anzu'].map(g => [g, g.toLowerCase()]));
 // Dinosaurs known almost entirely from isolated teeth. Those without their own painting share the fossil-teeth plate.
 const TEETH = ['Richardoestesia','Paronychodon','Pectinodon','Zapsalis'];
 for (const g of TEETH) ART[g] ||= 'teeth';
