@@ -858,11 +858,22 @@ function newsArt(s){
   if (/footprint|trackway/i.test(s.title)) return ours('art/track.jpg', 'Dinosaur footprint painting');
   if (/\beggs?\b|\bnests?\b/i.test(s.title)) return ours('art/eggs.jpg', 'Fossil eggs painting');
   // The paper card sits under the outlet's photo, so a photo that fails to load just reveals it.
+  // A newly named species has no painting yet: a silhouette of its kind with a question mark stands in.
+  if (!s.image && NEW_SPECIES.test(s.title + ' ' + s.summary)) {
+    const t = s.title + ' ' + s.summary, sil = MYSTERY.find(([re]) => re.test(t))?.[1] || '_g_theropod';
+    return `<div class="pic mystery ${s.per || ''}"><span class="shape" style="--m:url('art/sil/${sil}.png')" aria-hidden="true"></span><b class="q" aria-hidden="true">?</b><span class="who">A new species</span></div>`;
+  }
   // With no photo and no age to show, the card is just its words.
   if (!s.image && !s.ma) return '';
   const photo = s.image ? `<img class="photo" src="${safeUrl(s.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
   return `<div class="pic blank ${s.per || ''}">${s.ma ? `<b>${agoText(s.ma).replace(' years', '<br>years')}</b>` : ''}<span class="who">${safe(s.source)}</span>${photo}</div>`;
 }
+
+const NEW_SPECIES = /new (?:\w+ )?(?:dinosaur )?species|newly (?:named|identified|described|discovered)|new (?:\w+ )?dinosaur\b/i;
+// The silhouette for a new species, by what the story calls it; anything else gets a theropod.
+const MYSTERY = [[/sauropod|titanosaur|long[- ]neck/i, '_g_sauropod'], [/armou?red|ankylosaur|nodosaur/i, '_g_ankylosaur'],
+  [/horned|ceratops/i, '_ceratopsidae'], [/duck[- ]bill|hadrosaur/i, '_g_hadrosaur'], [/iguanodon|ornithopod/i, '_g_ornithopod'],
+  [/dome[- ]head|pachycephalosaur/i, '_g_pachy'], [/\bbirds?\b/i, '_g_bird'], [/stegosaur|plant[- ]eat|herbivor/i, '_g_other']];
 
 function storyCard(s, lead = false){
   const n = s.more.length;
