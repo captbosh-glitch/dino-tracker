@@ -1,6 +1,6 @@
 // Dino Tracker service worker: keeps the app, its reference data and the art it has shown on the device,
 // so places you've already looked up still open without a connection.
-const VERSION = 'dt-shell-v19';
+const VERSION = 'dt-shell-v20';
 const MEDIA = 'dt-media-v1';
 const SHELL = [
   './', 'index.html', 'app.css', 'app.js', 'data.js', 'manifest.webmanifest',
@@ -21,6 +21,14 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   // fossil records, place lookups and map tiles always come fresh; the app falls back to saved results itself
   if (/paleobiodb|zippopotam|openstreetmap/.test(url.host)) return;
+  // Outlet photos on the News page aren't kept: they'd only fill the device with pictures of old news.
+  if (url.origin !== location.origin && req.destination === 'image') return;
+  // The news file changes every few hours, so try the network first and fall back to the last copy.
+  if (url.origin === location.origin && url.pathname.endsWith('/data/news.json')) {
+    e.respondWith(fetch(req).then(r => { if (r.ok) caches.open(VERSION).then(c => c.put(req, r.clone())); return r; })
+      .catch(() => caches.match(req)));
+    return;
+  }
   if (url.origin === location.origin && /\/art\//.test(url.pathname)) {
     e.respondWith(caches.open(MEDIA).then(async c => (await c.match(req)) || fetch(req).then(r => { if (r.ok) c.put(req, r.clone()); return r; })));
     return;

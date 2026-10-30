@@ -214,10 +214,12 @@ const placeName = pl => pl.town && pl.st ? `${pl.town}, ${pl.st}` : pl.town ? pl
 const placeLine = pl => [pl.zip, [pl.town, pl.state, pl.country].filter((s, i, a) => s && a.indexOf(s) === i).join(', ')].filter(Boolean).join(' · ') || 'Your location';
 
 function setNav(){
-  document.getElementById('nav-explore').setAttribute('aria-current', view !== 'about' ? 'page' : 'false');
+  document.getElementById('nav-explore').setAttribute('aria-current', view !== 'about' && view !== 'news' ? 'page' : 'false');
+  // Optional: a page cached before News existed has no News button until it refreshes.
+  document.getElementById('nav-news')?.setAttribute('aria-current', view === 'news' ? 'page' : 'false');
   document.getElementById('nav-about').setAttribute('aria-current', view === 'about' ? 'page' : 'false');
   const pill = document.getElementById('loc-pill');
-  pill.hidden = !place || view === 'home' || view === 'about';
+  pill.hidden = !place || view === 'home' || view === 'about' || view === 'news';
   if (place) pill.querySelector('span').textContent = placeName(place);
   pill.setAttribute('aria-label', 'Change location');
 }
@@ -226,6 +228,7 @@ function setNav(){
 function urlFor(v){
   const q = new URLSearchParams();
   if (v === 'about') q.set('about', '');
+  else if (v === 'news') q.set('news', '');
   else if (v === 'home' && mapDino) q.set('find', mapDino);
   else if (place && v !== 'home') {
     if (place.zip) q.set('zip', place.zip); else q.set('at', `${place.lat},${place.lng}`);
@@ -242,9 +245,9 @@ function go(v, opts = {}){
     const u = urlFor(v);
     if (u !== location.pathname + location.search) history[opts.replace ? 'replaceState' : 'pushState']({}, '', u);
   }
-  document.title = v === 'detail' ? `${current} · Dino Tracker` : v === 'results' && place ? `${placeName(place)} · Dino Tracker` : 'Dino Tracker';
+  document.title = v === 'detail' ? `${current} · Dino Tracker` : v === 'results' && place ? `${placeName(place)} · Dino Tracker` : v === 'news' ? 'News · Dino Tracker' : 'Dino Tracker';
   setNav();
-  ({home:renderHome, results:renderResults, detail:renderDetail, xdetail:renderX, about:renderAbout})[v]();
+  ({home:renderHome, results:renderResults, detail:renderDetail, xdetail:renderX, about:renderAbout, news:renderNews})[v]();
   if (!opts.keepScroll) window.scrollTo(0, 0);
 }
 
@@ -701,6 +704,7 @@ function renderResults(){
     <div class="sites">${pl.sites.map(([n,s]) => `<div class="site"><b>${n}</b><span>${s}</span></div>`).join('')}</div></section>`;
 
   app.innerHTML = `<div class="results">${html}</div>`;
+  badgeCards();
   const redraw = () => go('results', {keepScroll:true});
   // Tap a period to focus on it; tap it again to bring every period back.
   app.querySelectorAll('[data-per]').forEach(b => b.addEventListener('click', () => {
@@ -761,6 +765,7 @@ function renderDetail(){
     <div><h2>${more[0]}</h2><p>${more[1]}</p>
       <div class="links"><a href="?find=${x.g}" data-find="${x.g}">Everywhere it’s been found ${ic('map')}</a><a href="https://paleobiodb.org/classic/checkTaxonInfo?taxon_name=${encodeURIComponent(x.g)}" target="_blank" rel="noopener">Fossil records ${ic('out')}</a><a href="https://en.wikipedia.org/wiki/${encodeURIComponent(x.g)}" target="_blank" rel="noopener">Further reading ${ic('out')}</a></div></div>
   </div>
+  <div id="newsslot"></div>
   ${peers.length ? `<section class="related"><div class="morehead"><span class="eyebrow">More from the ${per.name}, ${data.dnear}</span><span>Shared region and period</span></div><div class="cards mini">${peers.map(p => card(p, true)).join('')}</div></section>` : ''}</div>`;
   document.getElementById('expand')?.addEventListener('click', () => {
     const lb = document.createElement('div'); lb.className = 'lightbox'; lb.setAttribute('role','dialog'); lb.setAttribute('aria-label', x.g + ' illustration');
@@ -770,6 +775,7 @@ function renderDetail(){
     lb.addEventListener('click', close); document.addEventListener('keydown', esc);
     document.body.appendChild(lb); lb.querySelector('button').focus();
   });
+  newsInto('dino', x.g);
 }
 
 /* ---------- non-dinosaur detail ---------- */
@@ -802,6 +808,7 @@ function renderX(){
     <div><h2>${moreT}</h2><p>${moreP}</p>
       <div class="links"><a href="https://en.wikipedia.org/wiki/${encodeURIComponent(sci.split(' and ')[0])}" target="_blank" rel="noopener">Further reading ${ic('out')}</a></div></div>
   </div>
+  <div id="newsslot"></div>
   ${peers.length ? `<section class="related"><div class="morehead"><span class="eyebrow">More from the ${era.name}</span><span>Also recorded ${data.near}</span></div>
     <div class="xcards">${peers.map(([j, w]) => xcard(j, w, data)).join('')}</div></section>` : ''}</div>`;
   document.getElementById('expand')?.addEventListener('click', () => {
@@ -812,6 +819,100 @@ function renderX(){
     lb.addEventListener('click', close); document.addEventListener('keydown', esc);
     document.body.appendChild(lb); lb.querySelector('button').focus();
   });
+  newsInto('x', k);
+}
+
+/* ---------- news ---------- */
+// data/news.json is rebuilt every few hours by tools/news.py: stories grouped across outlets and tagged with the
+// animals they're about. Headlines come from other sites, so everything from it is escaped before it's shown.
+let NEWS = null, newsReady = null;
+const NEWS_DAYS = 14;   // how long a story keeps the "In the news" badge on cards
+const safe = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'})[c]);
+const safeUrl = u => /^https?:\/\//.test(u || '') ? safe(u) : '#';
+const outLink = (url, html, cls = '') => `<a${cls ? ` class="${cls}"` : ''} href="${safeUrl(url)}" target="_blank" rel="noopener">${html}${ic('out', 'ico nt')}<span class="sr">(opens in a new tab)</span></a>`;
+const newsDate = iso => new Date(iso).toLocaleDateString('en-US', {month:'short', day:'numeric', timeZone:'UTC'});
+const agoText = ma => ma >= 1 ? `${ma >= 10 ? Math.round(ma) : +ma.toFixed(1)} million years ago` : `${(Math.round(ma * 1000) * 1000).toLocaleString('en-US')} years ago`;
+
+function loadNews(){
+  return newsReady ||= fetch('data/news.json').then(r => r.ok ? r.json() : Promise.reject())
+    .then(j => (NEWS = j)).catch(() => { newsReady = null; return null; });
+}
+const recent = s => Date.now() - Date.parse(s.latest) < NEWS_DAYS * 864e5;
+// Cards for animals with a story in the last fortnight get a badge. They keep their place in the list.
+function badgeCards(){
+  if (!NEWS) return loadNews().then(n => n && view === 'results' && badgeCards());
+  const d = new Set(), x = new Set();
+  for (const s of NEWS.stories) if (recent(s)) { s.about.forEach(g => d.add(g)); s.x.forEach(k => x.add(k)); }
+  app.querySelectorAll('.card[data-dino], .xcard[data-x]').forEach(c => {
+    if (!(d.has(c.dataset.dino) || x.has(c.dataset.x)) || c.querySelector('.newsbadge')) return;
+    c.querySelector('.art')?.insertAdjacentHTML('afterbegin', `<span class="newsbadge">${ic('news')}In the news</span>`);
+  });
+}
+
+// Our own painting when a story is about an animal we've painted, then the outlet's photo, then the story's age on paper.
+function newsArt(s){
+  const g = s.about.find(g => ART[g] && ART[g] !== 'teeth'), k = s.x.find(k => XART[k]);
+  const ours = (src, alt) => `<div class="pic"><img src="${src}" alt="${safe(alt)}" loading="lazy"><span class="who">Dino Tracker painting</span></div>`;
+  if (g) return ours(`art/${ART[g]}.jpg`, `${g} painting`);
+  if (k) return ours(`art/${XART[k]}.jpg`, `${INSTEAD[k].name} painting`);
+  if (/footprint|trackway/i.test(s.title)) return ours('art/track.jpg', 'Dinosaur footprint painting');
+  if (/\beggs?\b|\bnests?\b/i.test(s.title)) return ours('art/eggs.jpg', 'Fossil eggs painting');
+  // The paper card sits under the outlet's photo, so a photo that fails to load just reveals it.
+  // With no photo and no age to show, the card is just its words.
+  if (!s.image && !s.ma) return '';
+  const photo = s.image ? `<img class="photo" src="${safeUrl(s.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
+  return `<div class="pic blank ${s.per || ''}">${s.ma ? `<b>${agoText(s.ma).replace(' years', '<br>years')}</b>` : ''}<span class="who">${safe(s.source)}</span>${photo}</div>`;
+}
+
+function storyCard(s, lead = false){
+  const n = s.more.length;
+  const sources = n ? `<details><summary>Also reported by ${n} more outlet${n > 1 ? 's' : ''}</summary><p>${s.more.map(m => outLink(m.url, safe(m.source))).join(', ')}</p></details>` : '';
+  const kind = !s.about.length && s.x.length ? INSTEAD[s.x[0]].kind : '';
+  const tags = s.age || kind ? `<div class="row">${s.age ? `<span class="tag ${s.per}">${safe(s.age)}</span>` : ''}${kind ? `<span class="kind">${kind}</span>` : ''}</div>` : '';
+  // Links into the app stay in this tab; the story itself opens on the publisher's site in a new one.
+  const guides = s.about.filter(g => GEN?.[g] || ART[g]).slice(0, 2).map(g => `<a class="dino" href="?find=${encodeURIComponent(g)}" data-find="${safe(g)}">${ic('map')}Where ${safe(g)} lived</a>`).join('');
+  return `<article class="nstory${lead ? ' lead' : ''}" data-k="${s.kind}">${newsArt(s)}<div class="body">
+    <div class="src">${safe(s.source)} · ${newsDate(s.published)}</div>${tags}
+    <h3>${outLink(s.url, safe(s.title), 'hl')}</h3>${s.summary ? `<p>${safe(s.summary)}</p>` : ''}${sources}
+    ${guides ? `<div class="links">${guides}</div>` : ''}</div></article>`;
+}
+
+async function renderNews(){
+  app.innerHTML = `<div class="news"><div class="newshead"><span class="eyebrow">Field notes · Updated every few hours</span><h1>Fresh from the dig.</h1>
+    <p>The latest fossil discoveries from science news. When a story names an animal in the field guide, it links straight to it. Headlines open on the publisher’s site in a new tab.</p></div>
+    <div id="newsbody"><p class="muted">Loading the latest stories…</p></div></div>`;
+  const n = await loadNews(), body = document.getElementById('newsbody');
+  if (view !== 'news' || !body) return;
+  if (!n?.stories?.length) { body.innerHTML = `<div class="notice"><div><b>The news isn’t available right now.</b> Check your connection and try again.</div></div>`; return; }
+  const all = n.stories, count = k => all.filter(s => s.kind === k).length;
+  // Lead with the most widely covered story of the past week; the rest follow, newest first.
+  const week = all.filter(s => Date.now() - Date.parse(s.latest) < 7 * 864e5);
+  const lead = (week.length ? week : all).reduce((a, s) => s.more.length > a.more.length ? s : a);
+  body.innerHTML = `<div class="filters" role="group" aria-label="Filter stories">
+      <button class="chip" aria-pressed="true" data-f="all">All<span>${all.length}</span></button>
+      <button class="chip" aria-pressed="false" data-f="dino">Dinosaurs<span>${count('dino')}</span></button>
+      <button class="chip" aria-pressed="false" data-f="beyond">Beyond dinosaurs<span>${count('beyond')}</span></button>
+      <span class="updated">Updated ${new Date(n.updated).toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}</span></div>
+    ${storyCard(lead, true)}<div class="stories">${all.filter(s => s !== lead).map(s => storyCard(s)).join('')}</div>
+    <div class="foot-note">${ic('info')}<span>Stories from the last 30 days, from ScienceDaily, Phys.org, Live Science and outlets found through Google News. Dino Tracker shows each headline and summary and links to the full story; the reporting belongs to its publisher.</span></div>`;
+  body.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => {
+    body.querySelectorAll('[data-f]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    body.querySelectorAll('.nstory').forEach(s => s.hidden = b.dataset.f !== 'all' && s.dataset.k !== b.dataset.f);
+  }));
+}
+
+// "In the news" on a field guide: stories about the animal first, then ones that only mention it.
+async function newsInto(kind, key){
+  const n = await loadNews(), slot = document.getElementById('newsslot');
+  if (!n || !slot) return;
+  const about = n.stories.filter(s => kind === 'x' ? s.x.includes(key) : s.about.includes(key));
+  const mention = kind === 'x' ? [] : n.stories.filter(s => s.mentions.includes(key) && !about.includes(s));
+  const list = [...about, ...mention].slice(0, 4);
+  if (!list.length) return;
+  slot.innerHTML = `<section class="inthenews"><h2>${ic('news')}In the news</h2><ul>${list.map(s => `<li>
+    <span>${safe(s.source)} · ${newsDate(s.published)}${s.more.length ? ` · +${s.more.length} more` : ''}</span>${outLink(s.url, safe(s.title), 'hl')}
+    ${mention.includes(s) ? `<em>Mentions ${safe(key)}${s.about[0] ? ` · the story is about ${safe(s.about[0])}` : ''}</em>` : ''}</li>`).join('')}</ul>
+    <button class="linkbtn" data-go="news">All fossil news ${ic('arrow')}</button></section>`;
 }
 
 /* ---------- about ---------- */
@@ -826,6 +927,7 @@ function renderAbout(){
   <h2>Why the map is uneven</h2><p>The fossil record follows the people who search for it. North America, Europe, Argentina and China have been explored for well over a century, while much of Africa, South Asia and Siberia has barely been surveyed. An empty region usually means “not yet found,” not “nothing lived here.”</p>
   <h2>Before and after the dinosaurs</h2><p>The timeline runs from the Paleozoic, when trilobites, armored fish and sail-backed Dimetrodon lived, through the Triassic, Jurassic and Cretaceous, to the Cenozoic, when mammals took over. Each animal that isn’t a dinosaur is labeled with the period its fossils nearby come from, such as Ordovician or Pleistocene, worked out from the ages of the records themselves.</p>
   <h2>Footprints, eggs and birds</h2><p>Fossil tracks and eggshell are named separately from the animals that made them, so they appear in their own sections. Birds are dinosaurs too, but this guide focuses on the non-bird dinosaurs, plus a few toothed early birds from the age of dinosaurs.</p>
+  <h2>News</h2><p>The News page collects fossil stories from the last 30 days from ScienceDaily, Phys.org, Live Science and other outlets found through Google News, and checks for new ones every few hours. Each headline links to the publisher’s site and opens in a new tab. When a story names an animal in the field guide, it’s linked to it, and the animal’s card gets an “In the news” badge for two weeks. Stories are matched automatically, so the occasional match can be off.</p>
   <h2>Offline</h2><p>Places you’ve looked up are saved on your device, so they still open without a connection. Elsewhere in the US, Dino Tracker falls back to statewide records saved in October 2026.</p>
   <h2>Illustrations and silhouettes</h2><p>Paintings are from the Dino Tracker specimen collection. Dinosaurs without a painting yet use silhouettes from PhyloPic, an open library of organism silhouettes, limited to images in the public domain or under a Creative Commons Attribution license. When there is no usable silhouette of a dinosaur itself, a close relative is shown and labeled. Silhouettes by ${artists.join(', ')}.</p></article>`;
 }
@@ -843,10 +945,11 @@ document.addEventListener('click', async e => {
   go(t.dataset.go);
 });
 
-// Read the address bar: ?zip=80401, ?at=39.76,-105.22, plus &dino= or &x= for a detail page, ?find=Tyrannosaurus for the map, or ?about.
+// Read the address bar: ?zip=80401, ?at=39.76,-105.22, plus &dino= or &x= for a detail page, ?find=Tyrannosaurus for the map, ?news or ?about.
 async function route(replace){
   const q = new URLSearchParams(location.search);
   if (q.has('about')) return go('about', {history:false});
+  if (q.has('news')) return go('news', {history:false});
   const zip = q.get('zip'), at = q.get('at'), find = q.get('find');
   if (!zip && !at) {
     place = null; mapDino = /^[A-Za-z]{2,40}$/.test(find || '') ? find : null;
