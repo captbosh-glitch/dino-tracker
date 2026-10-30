@@ -1,6 +1,6 @@
 // Dino Tracker service worker: keeps the app, its reference data and the art it has shown on the device,
 // so places you've already looked up still open without a connection.
-const VERSION = 'dt-shell-v22';
+const VERSION = 'dt-shell-v23';
 const MEDIA = 'dt-media-v1';
 const SHELL = [
   './', 'index.html', 'app.css', 'app.js', 'data.js', 'manifest.webmanifest',
@@ -10,7 +10,8 @@ const SHELL = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // 'reload' skips the browser's own short-term cache, so a new release never saves an older copy of a file.
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION && k !== MEDIA).map(k => caches.delete(k))))

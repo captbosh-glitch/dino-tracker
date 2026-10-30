@@ -999,4 +999,10 @@ window.addEventListener('popstate', () => route());
 route(true);
 setTimeout(newsCount, 600);
 
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  // When a new release takes over, reload once so it shows straight away instead of on the next visit.
+  const had = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !reloaded) { reloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
+}
