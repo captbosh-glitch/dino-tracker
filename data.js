@@ -60,7 +60,8 @@ const ART = Object.fromEntries(['Stegosaurus','Allosaurus','Diplodocus','Apatosa
   'Coahuilasaurus','Gremlin','Giraffatitan','Masiakasaurus','Kentrosaurus','Balochisaurus','Magyarosaurus','Malawisaurus','Tornieria',
   'Gspsaurus','Nodocephalosaurus','Turanoceratops','Ojoceratops','Sulaimanisaurus','Efraasia','Tanius','Turiasaurus','Marisaurus',
   'Itemirus','Lewisuchus','Patagosaurus','Sibirotitan','Baurutitan','Tsintaosaurus','Magnapaulia','Lamplughsaura','Asilisaurus',
-  'Khetranisaurus','Mbiresaurus'].map(g => [g, g.toLowerCase()]));
+  'Khetranisaurus','Mbiresaurus',
+  'Theiophytalia','Rinconraptor'].map(g => [g, g.toLowerCase()]));
 // Dinosaurs known almost entirely from isolated teeth. Those without their own painting share the fossil-teeth plate.
 const TEETH = ['Richardoestesia','Paronychodon','Pectinodon','Zapsalis'];
 for (const g of TEETH) ART[g] ||= 'teeth';
