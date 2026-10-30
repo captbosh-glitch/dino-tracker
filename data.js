@@ -39,7 +39,18 @@ const ART = Object.fromEntries(['Stegosaurus','Allosaurus','Diplodocus','Apatosa
   'Astigmasaura','Chucarosaurus','Jakapil','Elemgasem','Kelumapusaura','Menucocelsior','Inawentu','Bustingorrytitan','Diuqin',
   'Chakisaurus','Chadititan','Yeneen','Sinornithosaurus','Anchiornis','Jeholosaurus','Beipiaosaurus','Bolong','Caudipteryx',
   'Mei','Dilong','Sinocalliopteryx','Crichtonpelta','Liaoceratops','Protarchaeopteryx','Epidendrosaurus','Pedopenna','Borealosaurus',
-  'Shuangmiaosaurus','Sinusonasus','Jinzhousaurus','Similicaudipteryx','Zhongornis','Epidexipteryx','Graciliraptor','Tianyuraptor','Dongbeititan'].map(g => [g, g.toLowerCase()]));
+  'Shuangmiaosaurus','Sinusonasus','Jinzhousaurus','Similicaudipteryx','Zhongornis','Epidexipteryx','Graciliraptor','Tianyuraptor','Dongbeititan',
+  'Raptorex','Scansoriopteryx','Tianyulong','Xiaotingia','Sinotyrannus','Shenzhousaurus','Yutyrannus','Hexing','Eosinopteryx',
+  'Ningyuansaurus','Changyuraptor','Chuanqilong','Yi','Zhenyuanlong','Caihong','Serikornis','Jianianhualong','Ambopteryx',
+  'Zhongjianosaurus','Lingyuanosaurus','Liaoningvenator','Changmiania','Daliansaurus','Ruixinia','Haolong','Pulaosaurus','Huadanosaurus',
+  'Changzhousaurus','Piveteausaurus','Camelotia','Normanniasaurus','Haestasaurus','Agnosphitys','Cumnoria','Pantydraco','Dubreuillosaurus',
+  'Proceratosaurus','Neovenator','Yaverlandia','Juratyrant','Streptospondylus','Duriavenator','Magnosaurus','Eustreptospondylus','Metriacanthosaurus',
+  'Becklespinax','Oplosaurus','Asylosaurus','Eotyrannus','Anoplosaurus','Xenoposeidon','Cardiodon','Cruxicheiros','Tapinosaurus',
+  'Dracoraptor','Aristosuchus','Vectaerovenator','Pendraig','Ceratosuchops','Brighstoneus','Vectiraptor','Riparovenator','Calamosaurus',
+  'Vectidromeus','Vectipelta','Comptonatus','Caletodraco','Istiorachis','Invictibellatrix','Dromiceiomimus','Foraminacephale','Latenivenatrix',
+  'Scolosaurus','Albertavenator','Coronosaurus','Albertonykus','Thanatotheristes','Dyoplosaurus','Rativates','Unescoceratops','Eotriceratops',
+  'Spinops','Epichirostenotes','Apatoraptor','Eopinacosaurus','Fenestrosaurus','Ovoraptor','Archaeornithoides','Quaesitosaurus','Shanag',
+  'Mahakala','Gobivenator','Plesiohadros','Aepyornithomimus','Abdarainurus','Beg','Smitanosaurus','Maraapunisaurus','Hypsirophus'].map(g => [g, g.toLowerCase()]));
 // Dinosaurs known almost entirely from isolated teeth. Those without their own painting share the fossil-teeth plate.
 const TEETH = ['Richardoestesia','Paronychodon','Pectinodon','Zapsalis'];
 for (const g of TEETH) ART[g] ||= 'teeth';
