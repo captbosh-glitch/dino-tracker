@@ -671,9 +671,9 @@ function renderResults(){
       <div class="tracks">${data.t.map(([g,n,f]) => `<div class="track-chip"><b>${g}</b><span>${f[0] ? f[0] + ' Formation · ' : ''}${n} record${n>1?'s':''}</span></div>`).join('')}</div></div></section>`;
 
   if (meso && data.e.length) html += `
-    <section class="section"><span class="eyebrow">Eggshell</span><h2>Nests left behind</h2>
+    <section class="section feature"><img class="feat-art" src="art/eggs.jpg" alt="A clutch of cracked fossil dinosaur eggs resting in sand"><div><span class="eyebrow">Eggshell</span><h2>Nests left behind</h2>
       <p>Fossil eggs are named by their shell structure, separately from the dinosaurs that laid them.</p>
-      <div class="tracks">${data.e.map(([g,n,f]) => `<div class="track-chip"><b>${g}</b><span>${f[0] ? f[0] + ' Formation · ' : ''}${n} record${n>1?'s':''}</span></div>`).join('')}</div></section>`;
+      <div class="tracks">${data.e.map(([g,n,f]) => `<div class="track-chip"><b>${g}</b><span>${f[0] ? f[0] + ' Formation · ' : ''}${n} record${n>1?'s':''}</span></div>`).join('')}</div></div></section>`;
 
   if (mx.length) html += `<section class="era"><div class="erahead meso"><span class="eyebrow">${data.d.length ? 'Also in the age of dinosaurs' : 'The age of dinosaurs · Mesozoic'}</span><h2>${pl.state === 'Kansas' ? 'Life in the inland sea' : 'Who swam and flew here'}</h2>
     <p>While dinosaurs walked the land, these animals swam and flew over the seas that covered this region. None of them are dinosaurs.</p><div class="xcards">${mx.map(([k, v]) => xcard(k, v, data)).join('')}</div></section>`;
