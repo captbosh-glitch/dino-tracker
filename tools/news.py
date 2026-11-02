@@ -7,7 +7,7 @@ from different outlets, and tags each with the animals it names:
   data/news.json           the grouped stories the app reads, plus the latest videos from a few YouTube channels
 Run it with `python3 tools/news.py`. It needs only the Python standard library.
 """
-import hashlib, html, json, os, re, sys, urllib.request
+import hashlib, html, json, os, re, sys, time, urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -86,7 +86,18 @@ PERIODS = [(r'cambrian', 'Cambrian', 'pal'), (r'ordovician', 'Ordovician', 'pal'
            (r'paleogene|paleocene|eocene', 'Paleogene', 'cen'), (r'ice age|pleistocene|mammoth', 'Ice Age', 'cen')]
 
 
-def videos(now):
+def feed(req, tries=3):
+    """YouTube's feeds return a 404 or 500 now and then for channels that are fine, so try a few times."""
+    for i in range(tries):
+        try:
+            return ET.fromstring(urllib.request.urlopen(req, timeout=20).read())
+        except Exception:
+            if i == tries - 1:
+                raise
+            time.sleep(3 * (i + 1))
+
+
+def videos(now, before):
     """The latest deep-time videos from the channels above, newest first."""
     ns = {'a': 'http://www.w3.org/2005/Atom', 'yt': 'http://www.youtube.com/xml/schemas/2015',
           'm': 'http://search.yahoo.com/mrss/'}
@@ -95,9 +106,11 @@ def videos(now):
     for cid, (channel, trusted) in CHANNELS.items():
         try:
             req = urllib.request.Request('https://www.youtube.com/feeds/videos.xml?channel_id=' + cid, headers={'User-Agent': UA})
-            root = ET.fromstring(urllib.request.urlopen(req, timeout=20).read())
+            root = feed(req)
         except Exception as e:
             print(f'  {channel}: {e}', file=sys.stderr)
+            # YouTube's feeds fail now and then; keep the channel's videos from the last run until the next good one.
+            out += [v for v in before if v['channel'] == channel and v['published'] >= cutoff]
             continue
         for e in root.findall('a:entry', ns):
             vid, title = e.findtext('yt:videoId', '', ns), html.unescape(e.findtext('a:title', '', ns))
@@ -317,7 +330,8 @@ def main():
     articles.sort(key=lambda a: a['published'], reverse=True)
     stories = group(articles)
     json.dump(articles, open(RAW, 'w', encoding='utf-8'), ensure_ascii=False, indent=0)
-    vids = videos(now)
+    before = json.load(open(OUT, encoding='utf-8')).get('videos', []) if os.path.exists(OUT) else []
+    vids = videos(now, before)
     json.dump({'updated': now.strftime('%Y-%m-%dT%H:%M:%SZ'), 'stories': stories, 'videos': vids},
               open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
     print(f'{len(articles)} articles, {len(stories)} stories, {sum(1 for s in stories if s["about"])} name a dinosaur, {len(vids)} videos')
