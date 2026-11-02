@@ -867,7 +867,7 @@ function badgeCards(){
 // Our own painting when a story is about an animal we've painted, then the outlet's photo, then the story's age on paper.
 function newsArt(s){
   const g = s.about.find(g => ART[g] && ART[g] !== 'teeth'), k = s.x.find(k => XART[k]);
-  const ours = (src, alt) => `<div class="pic"><img src="${src}" alt="${safe(alt)}" loading="lazy"><span class="who">Dino Tracker painting</span></div>`;
+  const ours = (src, alt) => `<div class="pic art"><img src="${src}" alt="${safe(alt)}" loading="lazy"><span class="who">Dino Tracker painting</span></div>`;
   if (g) return ours(`art/${ART[g]}.jpg`, `${g} painting`);
   if (k) return ours(`art/${XART[k]}.jpg`, `${INSTEAD[k].name} painting`);
   if (/footprint|trackway/i.test(s.title)) return ours('art/track.jpg', 'Dinosaur footprint painting');

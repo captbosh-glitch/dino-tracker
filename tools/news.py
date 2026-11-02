@@ -249,7 +249,9 @@ def words(t):
 
 COMMON = set('dinosaur dinosaurs fossil fossils scientists paleontologists species skeleton million year years old ancient rare '
              'discovery discovered found reveals reveal first giant largest world museum study researchers prehistoric meet '
-             'photos video watch dino bones bone tooth teeth jurassic cretaceous triassic auction'.split())
+             'photos video watch dino bones bone tooth teeth jurassic cretaceous triassic auction '
+             # Compass words aren't names: "North Africa" and "North America" are different stories.
+             'north south east west northern southern eastern western northeast northwest southeast southwest'.split())
 
 
 def names(title):
