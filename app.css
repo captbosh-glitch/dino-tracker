@@ -129,6 +129,7 @@ label.f{font-weight:600;font-size:12px;line-height:15px;color:var(--ink)}
 .scene .cap{position:absolute;left:24px;bottom:22px;background:#fff;border-radius:6px;padding:16px;width:330px;display:flex;flex-direction:column;gap:5px}
 .scene .cap h3{font-size:21px;line-height:27px;color:#1f2937}
 .scene .cap p{margin:0;font-size:11px;line-height:1.5;color:#475569}
+.scene.cap-tr .cap{left:auto;bottom:auto;right:24px;top:22px}
 .guide{display:grid;grid-template-columns:418px minmax(0,1fr);gap:32px;padding-block:12px}
 .guide .ctx{display:flex;flex-direction:column;gap:10px}
 .guide .ctx p{margin:0;font-size:13px;line-height:1.6;color:var(--muted)}

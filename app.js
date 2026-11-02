@@ -253,9 +253,9 @@ function go(v, opts = {}){
 
 /* ---------- home ---------- */
 // The home scene: one era's landscape, picked at random once per visit (so it stays put while you browse).
-// pos is where to center a narrow crop, so the animals stay in frame.
+// pos is where to center a narrow crop, so the animals stay in frame; capTop moves the caption to the top right.
 const SCENES = [
-  { img: 'hero-paleozoic', pos: '72%', stamp: 'NOVA SCOTIA / 310 MILLION YEARS AGO', cap: 'An imagined Carboniferous coal swamp, like the fossil forest at Joggins.',
+  { img: 'hero-paleozoic', pos: '30%', capTop: true, stamp: 'NOVA SCOTIA / 310 MILLION YEARS AGO', cap: 'An imagined Carboniferous coal swamp, like the fossil forest at Joggins.',
     alt: 'Illustrated Carboniferous coal swamp with a giant dragonfly over a pool, a giant millipede on a fallen log and an early reptile on the bank' },
   { img: 'hero-triassic', pos: '78%', stamp: 'NEW MEXICO / 210 MILLION YEARS AGO', cap: 'An imagined Late Triassic floodplain near today’s Ghost Ranch.',
     alt: 'Illustrated Late Triassic floodplain with a slender early dinosaur, another in the distance, and a small furry mammal relative by a log' },
@@ -285,7 +285,7 @@ function renderHome(){
         <div class="resolved" id="zip-out" aria-live="polite"></div>
         <button class="btn" id="find" disabled>${ic('arrow')}Find dinosaurs</button></div>
     </section>
-    <figure class="scene">
+    <figure class="scene${SCENE.capTop ? ' cap-tr' : ''}">
       <img src="art/${SCENE.img}.jpg"${SCENE.pos ? ` style="object-position:${SCENE.pos} 50%"` : ''} alt="${SCENE.alt}" onerror="this.onerror=null;this.src='art/hero.jpg'">
       <span class="stamp">${ic('clock')}${SCENE.stamp}</span>
       <figcaption class="cap"><h3>A very different kind of local.</h3><p>${SCENE.cap}</p></figcaption>
