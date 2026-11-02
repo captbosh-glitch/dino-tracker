@@ -206,12 +206,21 @@ def stamp(e, now):
 
 
 def image_of(item, desc):
+    url = None
     for tag_ in ('{http://search.yahoo.com/mrss/}content', '{http://search.yahoo.com/mrss/}thumbnail', 'enclosure'):
         e = item.find(tag_)
         if e is not None and e.get('url') and (tag_ != 'enclosure' or (e.get('type') or '').startswith('image')):
-            return e.get('url')
-    m = re.search(r'<img[^>]+src="([^"]+)"', desc or '')
-    return m.group(1) if m else None
+            url = e.get('url')
+            break
+    if not url:
+        m = re.search(r'<img[^>]+src="([^"]+)"', desc or '')
+        url = m.group(1) if m else None
+    return sharper(url)
+
+
+def sharper(url):
+    """Phys.org's feed only offers a 90px thumbnail; the same picture is on its CDN at 800px wide."""
+    return re.sub(r'(b-cdn\.net/csz/news/)tmb/', r'\g<1>800a/', url) if url else None
 
 
 def fetch(now):
@@ -324,7 +333,7 @@ def main():
     now = datetime.now(timezone.utc)
     cutoff = (now - timedelta(days=KEEP_DAYS)).strftime('%Y-%m-%dT%H:%M:%SZ')
     kept = json.load(open(RAW, encoding='utf-8')) if os.path.exists(RAW) else []
-    by_id = {a['id']: a for a in kept}
+    by_id = {a['id']: dict(a, image=sharper(a.get('image'))) for a in kept}
     for a in fetch(now):
         by_id.setdefault(a['id'], a)
     articles = [a for a in by_id.values() if a['published'] >= cutoff and FOSSIL.search(a['title'] + ' ' + a['summary'])
