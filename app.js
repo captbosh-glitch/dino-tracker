@@ -475,7 +475,11 @@ function animalSearch(id, onPick){
     options().forEach((li, j) => li.setAttribute('aria-selected', j === i));
     if (i >= 0) { q.setAttribute('aria-activedescendant', `${id}-o${i}`); options()[i].scrollIntoView({block:'nearest'}); } else q.removeAttribute('aria-activedescendant');
   };
-  const open = () => { list.hidden = false; q.setAttribute('aria-expanded', 'true'); };
+  const open = () => {
+    list.hidden = false; q.setAttribute('aria-expanded', 'true');
+    // The header search sits left or right depending on how the header wraps; hang the list toward the room.
+    if (id === 'hq') list.classList.toggle('flip', q.getBoundingClientRect().right < list.offsetWidth + 16);
+  };
   // Boxes without a message line (the header's) show the message in the list instead.
   const say = t => {
     if (out) { out.className = 'resolved' + (t ? ' err' : ''); out.textContent = t; }
