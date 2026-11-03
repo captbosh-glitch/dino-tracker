@@ -963,9 +963,11 @@ async function renderNews(){
   newsCount();
   if (!n?.stories?.length) { body.innerHTML = `<div class="notice"><div><b>The news isn’t available right now.</b> Check your connection and try again.</div></div>`; return; }
   const all = n.stories, count = k => all.filter(s => s.kind === k).length;
-  // Lead with the most widely covered story of the past week; the rest follow, newest first.
-  const week = all.filter(s => Date.now() - Date.parse(s.latest) < 7 * 864e5);
-  const lead = (week.length ? week : all).reduce((a, s) => s.more.length > a.more.length ? s : a);
+  // Lead with the most widely covered story that broke in the past few days (or week); the rest follow, newest first.
+  // Going by when a story broke keeps a big old story's late echoes from holding the top spot.
+  const since = d => all.filter(s => Date.now() - Date.parse(s.published) < d * 864e5);
+  const pool = [since(3), since(7), all].find(p => p.length);
+  const lead = pool.reduce((a, s) => s.more.length > a.more.length ? s : a);
   // The row on the main view takes each channel's newest video, so one busy channel can't fill it.
   const vids = n.videos || [];
   body.innerHTML = `<div class="filters" role="group" aria-label="Filter stories">

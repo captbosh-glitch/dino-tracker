@@ -260,13 +260,22 @@ COMMON = set('dinosaur dinosaurs fossil fossils scientists paleontologists speci
              'discovery discovered found reveals reveal first giant largest world museum study researchers prehistoric meet '
              'photos video watch dino bones bone tooth teeth jurassic cretaceous triassic auction '
              # Compass words aren't names: "North Africa" and "North America" are different stories.
-             'north south east west northern southern eastern western northeast northwest southeast southwest'.split())
+             'north south east west northern southern eastern western northeast northwest southeast southwest '
+             # Headline hype says nothing about which story it is.
+             'rewrite rewrites rewriting reshape reshapes changes change incredible stunning amazing remarkable gamechanger '
+             'game changer landmark breakthrough experts claims claim time ever '
+             # Nor do the words every dinosaur story uses.
+             'fossilized fossilised predator predators predatory rex cousin relative identified possible near national park monument'.split())
 
 
 def names(title):
     """Distinctive names in a headline (Jodi, Nanotyrannus, Montana), for spotting the same story told differently."""
     # Capitalized words, skipping a headline's opening word unless it's quoted, like ‘Jodi’.
-    toks = [m.group(1) for m in re.finditer(r"(?:^|[\s‘'\"“])([A-Z][A-Za-z]{3,})", title) if m.start(1) > 0]
+    caps = re.findall(r"\b[A-Za-z][a-z]{3,}", title)
+    # In a Title Case headline every word is capitalized ("Fossil Named ‘Jodi’ Sells"), so there only quoted words count.
+    title_case = len(caps) >= 4 and sum(w[0].isupper() for w in caps) / len(caps) >= 0.7
+    toks = [m.group(2) for m in re.finditer(r"(^|[\s‘'\"“])([A-Z][A-Za-z]{3,})", title)
+            if m.start(2) > 0 and (not title_case or m.group(1) in "‘'\"“")]
     toks += [g for g in dinos_in(title) if g != 'Tyrannosaurus']
     return {t.lower() for t in toks if t.lower() not in COMMON}
 
@@ -275,20 +284,34 @@ def days(a, b):
     return abs((datetime.fromisoformat(a[:19]) - datetime.fromisoformat(b[:19])).days)
 
 
-def same(a, w, n, b, wb, nb):
-    shared = w & wb
-    if len(shared) / max(1, len(w | wb)) >= 0.34 or (len(shared) >= 3 and any(x.startswith('$') for x in shared)):
+def same(a, w, n, b, wb, nb, odd=lambda word, when: False):
+    shared, key = w & wb, (w - COMMON) & (wb - COMMON)
+    # Nearly the same headline, or mostly the same distinctive words. Common ones ("new dinosaur species identified") don't count.
+    if len(shared) / max(1, len(w | wb)) >= 0.6 or (len(key) >= 2 and len(key) / max(1, len((w | wb) - COMMON)) >= 0.34) \
+            or (len(shared) >= 3 and any(x.startswith('$') for x in shared)):
+        return True
+    near = days(a['published'], b['published'])
+    # A word that only turns up in headlines from these few days, like "blood" the day dinosaur blood cells made the news.
+    if near <= 2 and any(len(x) >= 4 and x not in COMMON and odd(x, a['published']) for x in shared):
         return True
     # A shared name plus one more shared word, a few days apart: "Jodi" in two auction headlines.
-    return bool(n & nb) and len(shared - n) >= 1 and days(a['published'], b['published']) <= 4
+    return bool(n & nb) and len(shared - n) >= 1 and near <= 4
 
 
 def group(articles):
     """One story per event: headlines are compared one to one, so stories can't snowball."""
+    seen = {}
+    for a in articles:
+        for x in words(a['title']):
+            seen.setdefault(x, []).append(a['published'])
+    # Several headlines use the word within a few days, and at most one from further away.
+    odd = lambda x, when: (sum(days(t, when) <= 2 for t in seen.get(x, ())) >= 4
+                           and sum(days(t, when) > 3 for t in seen.get(x, ())) <= 1)
+    same_ = lambda *h: same(*h, odd=odd)
     stories = []
     for a in sorted(articles, key=lambda a: a['published']):
         w, n = words(a['title']), names(a['title'])
-        home = next((st for st in stories if any(same(a, w, n, b, wb, nb) for b, wb, nb in st['heads'])), None)
+        home = next((st for st in stories if any(same_(a, w, n, b, wb, nb) for b, wb, nb in st['heads'])), None)
         if home:
             home['items'].append(a)
             home['heads'].append((a, w, n))
@@ -300,7 +323,7 @@ def group(articles):
         merged = False
         for i, st in enumerate(stories):
             for other in stories[i + 1:]:
-                if any(same(a, w, n, b, wb, nb) for a, w, n in st['heads'] for b, wb, nb in other['heads']):
+                if any(same_(a, w, n, b, wb, nb) for a, w, n in st['heads'] for b, wb, nb in other['heads']):
                     st['items'] += other['items']; st['heads'] += other['heads']
                     stories.remove(other); merged = True
                     break
@@ -325,7 +348,8 @@ def group(articles):
                     'about': about, 'mentions': mentions, 'x': xs, 'age': age[0] if age else None, 'per': age[1] if age else None,
                     'ma': age[2] if age else None,
                     'kind': 'dino' if dinoish else 'beyond', 'more': more})
-    out.sort(key=lambda s: (s['latest'], len(s['more'])), reverse=True)
+    # Newest first by the date each story shows, so an old story's late echoes don't lift it back to the top.
+    out.sort(key=lambda s: (s['published'], len(s['more'])), reverse=True)
     return out
 
 
