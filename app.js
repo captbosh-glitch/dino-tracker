@@ -290,10 +290,21 @@ function renderHome(){
   const z = place?.zip || '';
   app.innerHTML = `<div class="home">
   <div class="intro-row"><div class="intro"><span class="eyebrow">Explore your prehistoric neighborhood</span><h1>Who walked here before you?</h1>
-    <p>Find the dinosaurs that once called your corner of the world home. Start with where you are.</p></div>
+    <p>Find the dinosaurs that once called your corner of the world home. Start with a place, or with an animal.</p></div>
     <span class="meta-r">Field notes / Planet Earth</span></div>
   <div class="home-grid">
-    <section class="findcard" aria-labelledby="find-h">
+    <section class="findcard" aria-label="Start exploring">
+      <div class="seg" role="tablist" aria-label="Search by">${[['place', 'pin', 'Place'], ['animal', 'search', 'Animal']].map(([m, i, t]) =>
+        `<button role="tab" id="tab-${m}" aria-controls="pane-${m}" aria-selected="${homeMode === m}" data-mode="${m}">${ic(i)}${t}</button>`).join('')}</div>
+      <div class="pane" id="pane-animal" role="tabpanel" aria-labelledby="tab-animal"${homeMode === 'animal' ? '' : ' hidden'}>
+        <div class="fhead"><h2>${ic('search')}Find an animal</h2><p>Type any dinosaur or other prehistoric animal to see everywhere its fossils have been found.</p></div>
+        <div class="zipopt"><label class="f" for="aq">Dinosaur or other prehistoric animal</label>
+          ${searchBox('aq', 'e.g. Triceratops or Sarcosuchus')}
+          <div class="resolved" id="aq-out" aria-live="polite"></div></div>
+        <div class="popular"><span>Popular</span>${POPULAR.map(g => `<button class="chip" data-pick="${g}">${g}</button>`).join('')}</div>
+        <button class="btn primary" id="aq-go">${ic('map')}Show on the map</button>
+      </div>
+      <div class="pane" id="pane-place" role="tabpanel" aria-labelledby="tab-place"${homeMode === 'place' ? '' : ' hidden'}>
       <div class="fhead"><h2 id="find-h">${ic('pin')}Find your location</h2><p>Use your current location, or enter a US ZIP code or any place in the world.</p></div>
       <div class="opt"><button class="btn primary" id="gps">${ic('gps')}Use my location</button>
         <div class="hint">Uses GPS · Your browser will ask for permission</div><div id="gps-note" hidden></div></div>
@@ -302,6 +313,7 @@ function renderHome(){
         <div class="zipbox"><input class="zip" id="zip" autocomplete="off" enterkeyhint="search" placeholder="e.g. 80401 or Patagonia" value="${z}">${ic('pin')}</div>
         <div class="resolved" id="zip-out" aria-live="polite"></div>
         <button class="btn" id="find" disabled>${ic('arrow')}Find dinosaurs</button></div>
+      </div>
     </section>
     <figure class="scene${SCENE.capTop ? ' cap-tr' : ''}">
       <img src="art/${SCENE.img}.jpg"${SCENE.pos ? ` style="object-position:${SCENE.pos} 50%"` : ''} alt="${SCENE.alt}" onerror="this.onerror=null;this.src='art/hero.jpg'">
@@ -316,8 +328,7 @@ function renderHome(){
     <div class="mhead"><div><span class="eyebrow">Explore the map</span><h2 id="map-h">Pick any spot on Earth</h2></div>
       <p>Each dot marks dinosaur fossils found there. Bigger dots, more finds. Tap anywhere to see who lived nearby, or look up an animal to see everywhere it’s been found.</p></div>
     <div class="dsearch"><label class="f" for="dq">Look up a dinosaur or other prehistoric animal</label>
-      <div class="zipbox"><input class="zip" id="dq" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="dq-list" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="e.g. Tyrannosaurus or Dimetrodon" value="${mapDino || ''}">${ic('search')}
-        <ul class="dq-list" id="dq-list" role="listbox" aria-label="Prehistoric animals" hidden></ul></div>
+      ${searchBox('dq', 'e.g. Tyrannosaurus or Dimetrodon', mapDino || '')}
       <div class="resolved" id="dq-out" aria-live="polite"></div></div>
     <div class="dfound" id="dfound" aria-live="polite" hidden></div>
     <div class="map" id="map" aria-label="World map of dinosaur fossil finds"><div class="map-msg">Loading the map…</div></div>
@@ -383,7 +394,22 @@ function renderHome(){
     };
   });
   if (zip.value) check();
-  dinoSearch();
+  // The Place | Animal toggle, remembered while you browse.
+  const tabs = [...document.querySelectorAll('.seg [role="tab"]')];
+  const setMode = (m, focus) => {
+    homeMode = m;
+    for (const t of tabs) { const on = t.dataset.mode === m; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; document.getElementById('pane-' + t.dataset.mode).hidden = !on; }
+    if (focus) document.getElementById(m === 'animal' ? 'aq' : 'zip').focus();
+  };
+  tabs.forEach(t => {
+    t.addEventListener('click', () => setMode(t.dataset.mode, true));
+    t.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { const o = tabs.find(x => x !== t); setMode(o.dataset.mode); o.focus(); } });
+  });
+  setMode(homeMode);
+  const aq = animalSearch('aq', findAnimal);
+  document.getElementById('aq-go').addEventListener('click', aq.submit);
+  document.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => { remember(b.dataset.pick); findAnimal(b.dataset.pick); }));
+  animalSearch('dq', g => { showDino(g); history.replaceState({}, '', urlFor('home')); });
   // The map library only loads once the map scrolls near the screen.
   const el = document.getElementById('map');
   const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); initMap(el); } }, {rootMargin:'300px'});
@@ -417,51 +443,104 @@ function edits(a, b){
   }
   return prev[b.length];
 }
-function dinoSearch(){
-  const q = document.getElementById('dq'), list = document.getElementById('dq-list'), out = document.getElementById('dq-out');
+// The look-up-an-animal box: in the header, on the home card and above the map. All three work the same way.
+const searchBox = (id, ph, v = '') => `<div class="zipbox"><input class="zip" id="${id}" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${id}-list" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="${ph}" value="${v}">${ic('search')}
+  <ul class="dq-list" id="${id}-list" role="listbox" aria-label="Prehistoric animals" hidden></ul></div>`;
+const POPULAR = ['Tyrannosaurus', 'Triceratops', 'Stegosaurus', 'Pteranodon', 'Megalodon'];
+let homeMode = 'place';
+// The last few animals looked up on this device, offered when a search box is empty.
+const recentAnimals = () => (store.get('dt-recent') || []).filter(g => NAMES?.includes(g));
+const remember = g => store.set('dt-recent', [g, ...(store.get('dt-recent') || []).filter(x => x !== g)].slice(0, 5));
+// A small painting, or else a silhouette, so each suggestion looks like its field guide card.
+function thumbOf(g){
+  const xk = XNAMES[g]?.[0], paint = xk ? XART[xk] : ART[g] !== 'teeth' && ART[g];
+  if (paint) return `<span class="th" style="background-image:url('art/th/${paint}.jpg')"></span>`;
+  const s = xk ? XSIL[xk] : silFor({g, fam:GEN?.[g]?.[1] || '', grp:GEN?.[g]?.[0] || 'other'});
+  return `<span class="th">${s ? `<span class="shape" style="--m:url('art/sil/${s[0]}.png')"></span>` : ''}</span>`;
+}
+// Opens the map on an animal: in place on the home page, from anywhere else by going home first.
+function findAnimal(g){
+  const dq = document.getElementById('dq');
+  if (view === 'home' && dq) { dq.value = g; showDino(g); history.replaceState({}, '', urlFor('home')); }
+  else { mapDino = g; go('home'); }
+  document.querySelector('.mapcard')?.scrollIntoView({block:'start', behavior:'smooth'});
+}
+function animalSearch(id, onPick){
+  const q = document.getElementById(id), list = document.getElementById(id + '-list'), out = document.getElementById(id + '-out');
   let opts = [], at = -1;
+  const options = () => [...list.querySelectorAll('li[role="option"]')];
   const close = () => { list.hidden = true; q.setAttribute('aria-expanded', 'false'); q.removeAttribute('aria-activedescendant'); at = -1; };
   const mark = i => {
     at = i;
-    list.querySelectorAll('li').forEach((li, j) => li.setAttribute('aria-selected', j === i));
-    if (i >= 0) q.setAttribute('aria-activedescendant', 'dq-o' + i); else q.removeAttribute('aria-activedescendant');
+    options().forEach((li, j) => li.setAttribute('aria-selected', j === i));
+    if (i >= 0) { q.setAttribute('aria-activedescendant', `${id}-o${i}`); options()[i].scrollIntoView({block:'nearest'}); } else q.removeAttribute('aria-activedescendant');
   };
-  const pick = g => { q.value = g; close(); out.textContent = ''; showDino(g); history.replaceState({}, '', urlFor('home')); };
-  q.addEventListener('focus', loadNames, {once:true});
-  q.addEventListener('input', async () => {
-    out.className = 'resolved'; out.textContent = '';
-    const v = q.value.trim();
-    if (v.length < 2) return close();
-    await loadNames();
-    if (q.value.trim() !== v) return;
-    opts = matchNames(v);
-    if (!opts.length) return close();
-    list.innerHTML = opts.map((g, j) => {
-      const k = Math.max(0, g.toLowerCase().indexOf(v.toLowerCase())), i = g.toLowerCase().includes(v.toLowerCase()) ? v.length : 0;
-      return `<li role="option" id="dq-o${j}" data-g="${g}" aria-selected="false"><span class="nm">${g.slice(0, k)}<b>${g.slice(k, k + i)}</b>${g.slice(k + i)}</span><span>${kindOf(g)}</span></li>`;
+  const open = () => { list.hidden = false; q.setAttribute('aria-expanded', 'true'); };
+  // Boxes without a message line (the header's) show the message in the list instead.
+  const say = t => {
+    if (out) { out.className = 'resolved' + (t ? ' err' : ''); out.textContent = t; }
+    else if (t) { opts = []; list.innerHTML = `<li class="hd msg" role="presentation">${t}</li>`; open(); }
+  };
+  const show = (names, head) => {
+    opts = names;
+    if (!names.length) return close();
+    list.innerHTML = (head ? `<li class="hd" role="presentation">${head}</li>` : '') + names.map((g, j) => {
+      const v = q.value.trim().toLowerCase(), k = v ? g.toLowerCase().indexOf(v) : -1, n = k < 0 ? 0 : v.length, s = Math.max(0, k);
+      return `<li role="option" id="${id}-o${j}" data-g="${g}" aria-selected="false">${thumbOf(g)}<span class="nm">${g.slice(0, s)}<b>${g.slice(s, s + n)}</b>${g.slice(s + n)}</span><span class="k">${kindOf(g)}</span></li>`;
     }).join('');
-    list.hidden = false; q.setAttribute('aria-expanded', 'true'); mark(-1);
-  });
-  q.addEventListener('keydown', async e => {
+    open(); mark(-1);
+  };
+  const suggest = async () => {
+    const v = q.value.trim();
+    await loadNames();
+    if (q.value.trim() !== v || document.activeElement !== q) return;
+    if (v.length < 2) return show(recentAnimals(), 'Recent');
+    show(matchNames(v));
+  };
+  const pick = g => { q.value = g; close(); say(''); remember(g); onPick(g); };
+  const submit = async () => {
+    const v = q.value.trim();
+    if (!list.hidden && at >= 0) return pick(opts[at]);
+    if (v.length < 2) return q.focus();
+    await loadNames();
+    const hit = NAMES.find(g => g.toLowerCase() === v.toLowerCase()) || (!list.hidden && opts[0]) || matchNames(v)[0];
+    if (hit) return pick(hit);
+    say(`We couldn’t find an animal named “${clean(v)}”. Check the spelling, or try its genus, like Triceratops.`);
+  };
+  q.addEventListener('focus', suggest);
+  q.addEventListener('input', () => { say(''); suggest(); });
+  q.addEventListener('keydown', e => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      if (list.hidden) return;
+      if (list.hidden || !opts.length) return;
       e.preventDefault();
       mark(e.key === 'ArrowDown' ? (at + 1) % opts.length : at <= 0 ? opts.length - 1 : at - 1);
-    } else if (e.key === 'Escape') close();
-    else if (e.key === 'Enter') {
-      const v = q.value.trim();
-      if (!list.hidden && at >= 0) return pick(opts[at]);
-      if (v.length < 2) return;
-      await loadNames();
-      const hit = NAMES.find(g => g.toLowerCase() === v.toLowerCase()) || (!list.hidden && opts[0]);
-      if (hit) return pick(hit);
-      out.textContent = `We couldn’t find an animal named “${clean(v)}”. Check the spelling, or try its genus, like Triceratops.`; out.classList.add('err');
-    }
+    } else if (e.key === 'Escape') { if (!list.hidden) { e.stopPropagation(); close(); } }
+    else if (e.key === 'Enter') { e.preventDefault(); submit(); }
   });
   // mousedown, not click, so the pick lands before the input loses focus and the list closes
-  list.addEventListener('mousedown', e => { const li = e.target.closest('li'); if (li) { e.preventDefault(); pick(li.dataset.g); } });
-  q.addEventListener('blur', () => setTimeout(close, 100));
+  list.addEventListener('mousedown', e => { e.preventDefault(); const li = e.target.closest('li[role="option"]'); if (li) pick(li.dataset.g); });
+  // The phone sheet keeps its list showing when the keyboard goes away.
+  if (!q.closest('.sheet')) q.addEventListener('blur', () => setTimeout(close, 100));
+  return {submit, close};
 }
+
+// The header search on wider screens, and a full-screen search sheet on phones.
+(function headerSearch(){
+  const sheet = document.getElementById('sheet'), sq = document.getElementById('sq'), btn = document.getElementById('hs-btn');
+  if (!sheet || !document.getElementById('hq')) return;
+  const hq = animalSearch('hq', g => { document.getElementById('hq').blur(); findAnimal(g); });
+  const shut = () => { sheet.hidden = true; document.body.classList.remove('sheet-open'); btn.focus(); };
+  animalSearch('sq', g => { shut(); findAnimal(g); });
+  btn.addEventListener('click', () => { sheet.hidden = false; document.body.classList.add('sheet-open'); sq.value = ''; sq.focus(); });
+  document.getElementById('sq-cancel').addEventListener('click', shut);
+  sheet.addEventListener('keydown', e => { if (e.key === 'Escape') shut(); });
+  // Press / anywhere to start typing an animal's name.
+  document.addEventListener('keydown', e => {
+    if (e.key !== '/' || e.metaKey || e.ctrlKey || e.target.closest?.('input,textarea,select,[contenteditable]')) return;
+    e.preventDefault();
+    if (getComputedStyle(btn).display !== 'none') btn.click(); else document.getElementById('hq').focus();
+  });
+})();
 
 const REGION = (() => { try { return new Intl.DisplayNames(['en'], {type:'region'}); } catch { return null; } })();
 const countryOf = cc => { cc = cc === 'UK' ? 'GB' : cc; try { return REGION?.of(cc) || cc; } catch { return cc; } };
@@ -1043,7 +1122,7 @@ async function route(replace){
   if (q.has('news')) return go('news', {history:false});
   const zip = q.get('zip'), at = q.get('at'), find = q.get('find');
   if (!zip && !at) {
-    place = null; mapDino = /^[A-Za-z]{2,40}$/.test(find || '') ? find : null;
+    place = null; mapDino = /^[A-Za-z][A-Za-z -]{1,39}$/.test(find || '') ? find : null;
     go('home', {history:false});
     if (mapDino) document.querySelector('.mapcard')?.scrollIntoView({block:'start'});
     return;

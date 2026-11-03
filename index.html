@@ -50,15 +50,26 @@
       <span class="txt"><img class="wordmark" src="art/wordmark.png" alt="Dino Tracker"><span class="tagline">A FIELD GUIDE TO DEEP TIME</span></span>
     </button>
     <nav class="nav" aria-label="Main">
+      <div class="hs" role="search"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="hq" role="combobox" aria-label="Look up an animal" aria-autocomplete="list" aria-expanded="false" aria-controls="hq-list" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="Look up an animal">
+        <kbd aria-hidden="true">/</kbd><ul class="dq-list" id="hq-list" role="listbox" aria-label="Prehistoric animals" hidden></ul></div>
       <button data-go="home" id="nav-explore">Explore</button>
       <button data-go="news" id="nav-news">News</button>
       <button data-go="about" id="nav-about">About the data</button>
+      <button class="hs-btn" id="hs-btn" aria-label="Look up an animal"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg></button>
       <button class="pill" id="loc-pill" data-go="home" hidden><svg class="ico"><use href="#i-pin"/></svg><span></span></button>
     </nav>
   </div>
 </header>
 
 <main class="wrap" id="app"></main>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Look up an animal" hidden>
+  <div class="sheet-top"><div class="zipbox"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg>
+    <input id="sq" role="combobox" aria-label="Look up an animal" aria-autocomplete="list" aria-expanded="false" aria-controls="sq-list" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="Look up an animal"></div>
+    <button id="sq-cancel">Cancel</button></div>
+  <ul class="sq-list" id="sq-list" role="listbox" aria-label="Prehistoric animals" hidden></ul>
+</div>
 
 <footer class="site-foot"><div class="wrap">
   <span>Dino Tracker / A field guide to deep time.</span>

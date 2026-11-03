@@ -101,6 +101,47 @@ label.f{font-weight:600;font-size:12px;line-height:15px;color:var(--ink)}
 .dq-list li b{font-weight:700;color:var(--navy)}
 .dq-list li span:not(.nm){font-family:var(--mono);font-size:11px;color:var(--muted)}
 .dq-list li:hover,.dq-list li[aria-selected="true"]{background:var(--art)}
+/* Suggestions: a small painting or silhouette, the name, and what kind of animal it is. */
+.dq-list,.sq-list{max-height:min(420px,70vh);overflow-y:auto}
+.dq-list li,.sq-list li{align-items:center}
+.dq-list li .nm,.sq-list li .nm{flex:1;min-width:0}
+.th{flex:none;width:58px;height:24px;border-radius:4px;background:var(--paper) center/cover no-repeat;display:grid;place-items:center}
+.th .shape{width:46px;height:20px;background:var(--muted);opacity:.55;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+.dq-list li.hd,.sq-list li.hd{font:500 10.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 10px 4px;cursor:default;background:none}
+.dq-list li.msg,.sq-list li.msg{font:13px/1.5 var(--body);letter-spacing:0;text-transform:none;padding:8px 10px}
+/* Home card: Place | Animal */
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--art);border-radius:8px;padding:4px;gap:4px}
+.seg button{height:38px;border:0;border-radius:6px;background:none;font:600 14px var(--body);color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.seg button .ico{width:16px;height:16px}
+.seg button[aria-selected="true"]{background:var(--surface);color:var(--navy);box-shadow:0 1px 3px rgba(31,41,55,.12)}
+.pane{display:flex;flex-direction:column;gap:24px}
+.pane .zipbox{z-index:3}
+.popular{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.popular span{font-size:12px;color:var(--muted);margin-right:4px}
+/* Header search */
+.hs{position:relative;width:280px}
+.hs input{width:100%;height:40px;border-radius:100px;border:1px solid rgba(215,227,255,.45);background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:14px;padding:0 40px 0 38px}
+.hs input::placeholder{color:var(--track)}
+.hs > .ico{position:absolute;left:13px;top:12px;width:16px;height:16px;color:var(--track);pointer-events:none}
+.hs kbd{position:absolute;right:12px;top:10px;font:500 11px var(--mono);color:var(--track);border:1px solid rgba(215,227,255,.45);border-radius:4px;padding:1px 6px;pointer-events:none}
+.hs input:focus{background:var(--surface);color:var(--ink);border-color:var(--surface);outline:none;box-shadow:0 0 0 3px rgba(165,180,252,.6)}
+.hs input:focus ~ kbd{display:none}
+.hs:focus-within > .ico{color:var(--muted)}
+.hs .dq-list{top:calc(100% + 6px);left:auto;right:0;width:380px}
+.hs-btn{display:none}
+.sheet{position:fixed;inset:0;background:var(--page);z-index:2000;display:flex;flex-direction:column}
+.sheet-top{display:flex;gap:12px;align-items:center;padding:14px 16px;padding-top:max(14px,env(safe-area-inset-top));background:var(--navy)}
+.sheet-top .zipbox{flex:1}
+.sheet-top input{width:100%;height:44px;border-radius:100px;border:0;padding:0 16px 0 40px;font:inherit;font-size:16px;color:var(--ink)}
+.sheet-top .ico{left:14px;right:auto;top:14px}
+.sheet-top button{background:none;border:0;color:#fff;font:600 15px var(--body);cursor:pointer;padding:8px 0}
+.sq-list{list-style:none;margin:0;padding:8px 12px;max-height:none;flex:1}
+.sq-list li{display:flex;justify-content:space-between;gap:12px;padding:12px 6px;border-bottom:1px solid var(--line);font-size:16px;cursor:pointer;color:var(--ink)}
+.sq-list li b{font-weight:700;color:var(--navy)}
+.sq-list li .k{font:11px var(--mono);color:var(--muted)}
+.sq-list li.hd{border:0;padding:16px 6px 4px}
+.sq-list li[aria-selected="true"]{background:var(--art)}
+body.sheet-open{overflow:hidden}
 .dfound{display:flex;align-items:center;gap:16px;border:1px solid var(--line);border-radius:10px;padding:12px 16px;background:var(--page)}
 .dfound .dmsg{flex:1;font-size:13px;color:var(--muted)}
 .dfound .chip{flex:none}
@@ -328,6 +369,7 @@ label.f{font-weight:600;font-size:12px;line-height:15px;color:var(--ink)}
 
 @media (max-width:1060px) and (min-width:641px){.grp .long{display:none}.grp .short{display:inline}}
 @media (max-width:1100px){
+  .hs{width:220px}
   .per .pm{flex-direction:column;align-items:flex-start;gap:2px}
   .home-grid,.guide{grid-template-columns:minmax(0,1fr)}
   .scene{min-height:0;aspect-ratio:1202/626}
@@ -342,6 +384,9 @@ label.f{font-weight:600;font-size:12px;line-height:15px;color:var(--ink)}
   .mast .wrap{min-height:0}
   .brand .skull{width:72px}.brand .wordmark{width:205px}.brand .tagline{font-size:12px;line-height:16px}
   .nav{width:100%;justify-content:space-between;gap:16px}
+  .hs{display:none}
+  .hs-btn{display:grid;place-items:center;width:38px;height:38px;border-radius:100px;border:1px solid rgba(215,227,255,.45)!important;background:rgba(255,255,255,.1)!important;color:#fff!important;padding:0!important}
+  .hs-btn .ico{width:17px;height:17px}
   .findcard{padding:22px}
   .scene{aspect-ratio:auto;display:flex;flex-direction:column}
   .scene img{position:static;aspect-ratio:1202/626;height:auto}
