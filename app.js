@@ -5,8 +5,24 @@ const RADIUS = 100, WIDE = 250;   // miles: the regional search, and the wider l
 // The non-dinosaur animals we count around each place, as PBDB taxon names.
 const XQUERY = {trilobite:'Trilobita', ammonite:'Ammonoidea', dunkleosteus:'Dunkleosteus', eurypterus:'Eurypterus', mosasaur:'Tylosaurus,Mosasaurus',
   elasmosaurus:'Elasmosaurus', xiphactinus:'Xiphactinus', cretoxyrhina:'Cretoxyrhina', pteranodon:'Pteranodon', archelon:'Archelon', otodus:'Otodus',
-  mammuthus:'Mammuthus', mammut:'Mammut', smilodon:'Smilodon', sloth:'Megalonyx,Eremotherium',
-  dimetrodon:'Dimetrodon', edaphosaurus:'Edaphosaurus', eryops:'Eryops', diplocaulus:'Diplocaulus'};
+  mammuthus:'Mammuthus', mammut:'Mammut', smilodon:'Smilodon', sloth:'Megalonyx,Eremotherium,Paramylodon',
+  dimetrodon:'Dimetrodon', edaphosaurus:'Edaphosaurus', eryops:'Eryops', diplocaulus:'Diplocaulus',
+  anomalocaris:'Anomalocaris', meganeura:'Meganeura,Meganeuropsis', arthropleura:'Arthropleura', helicoprion:'Helicoprion', tiktaalik:'Tiktaalik', gorgonopsid:'Gorgonopsia',
+  quetzalcoatlus:'Quetzalcoatlus', tapejara:'Tapejara,Tupandactylus', rhamphorhynchus:'Rhamphorhynchus', pterodactylus:'Pterodactylus',
+  sarcosuchus:'Sarcosuchus', deinosuchus:'Deinosuchus', phytosaur:'Phytosauria', postosuchus:'Postosuchus', kaprosuchus:'Kaprosuchus',
+  plesiosaurus:'Plesiosaurus', liopleurodon:'Liopleurodon', kronosaurus:'Kronosaurus', dolichorhynchops:'Dolichorhynchops', ichthyosaurus:'Ichthyosaurus', shonisaurus:'Shonisaurus',
+  titanoboa:'Titanoboa', terrorbird:'Phorusrhacidae', direwolf:'Aenocyon', arctodus:'Arctodus', glyptodon:'Glyptodon,Glyptotherium', coelodonta:'Coelodonta',
+  basilosaurus:'Basilosaurus', entelodont:'Entelodontidae', paraceratherium:'Paraceratherium'};
+// These are whole groups, named in their records by many genera, so each gets its own request. The rest come back
+// together in one request and are sorted out by genus.
+const XGROUPS = ['trilobite', 'ammonite', 'gorgonopsid', 'phytosaur', 'terrorbird', 'entelodont'];
+const XGENUS = {};
+for (const [k, q] of Object.entries(XQUERY)) if (!XGROUPS.includes(k)) for (const g of q.split(',')) XGENUS[g] = k;
+// The age-of-dinosaurs animals that aren't sea creatures, so the results can give each kind its own section.
+const FLYERS = ['pteranodon', 'quetzalcoatlus', 'tapejara', 'rhamphorhynchus', 'pterodactylus'];
+const CROCS = ['sarcosuchus', 'deinosuchus', 'phytosaur', 'postosuchus', 'kaprosuchus'];
+// Terror birds are birds, and birds are dinosaurs.
+const xlabel = k => INSTEAD[k].dino ? 'Technically a dinosaur' : 'Not a dinosaur';
 
 let currentX = null, SNAP = null, GEN = null, DATA = null, place = null, view = 'home', rng = [0, 4], sortBy = 'featured', current = null, loading = null;
 const app = document.getElementById('app');
@@ -101,11 +117,13 @@ function aggregate(recs){
 async function lookupLive(pl, signal){
   await loadGen();
   const dinos = mi => getJSON(`${API}/occs/list.json?base_name=Dinosauria^Aves&${box(pl.lat, pl.lng, mi)}&show=class,strat&limit=all`, signal).then(j => aggregate(j.records || []));
-  const others = q => getJSON(`${API}/occs/list.json?base_name=${q}&${box(pl.lat, pl.lng, RADIUS)}&show=strat&limit=all`, signal).then(j => tally(j.records || []));
-  const [near, counts] = await Promise.all([dinos(RADIUS), Promise.all(Object.values(XQUERY).map(others))]);
+  const others = (q, show = 'strat') => getJSON(`${API}/occs/list.json?base_name=${q}&${box(pl.lat, pl.lng, RADIUS)}&show=${show}&limit=all`, signal).then(j => j.records || []);
+  const [near, byGenus, ...groups] = await Promise.all([dinos(RADIUS), others(Object.keys(XGENUS).join(','), 'class,strat'), ...XGROUPS.map(k => others(XQUERY[k]))]);
+  const recs = Object.fromEntries(XGROUPS.map((k, i) => [k, groups[i]]));
+  for (const r of byGenus) { const k = XGENUS[r.gnl?.split(' ')[0]]; if (k) (recs[k] ||= []).push(r); }
   let rec = near, mi = RADIUS;
   if (!near.d.length) { const wide = await dinos(WIDE); if (wide.d.length) { rec = {d:wide.d, t:near.t}; mi = WIDE; } }
-  const x = Object.fromEntries(Object.keys(XQUERY).map((k,i) => [k, counts[i]]).filter(([,v]) => v.n));
+  const x = Object.fromEntries(Object.keys(XQUERY).map(k => [k, tally(recs[k] || [])]).filter(([,v]) => v.n));
   return {...rec, x, mi, source:'live', at:Date.now()};
 }
 
@@ -485,7 +503,7 @@ async function showDino(g){
   box.className = `dfound ${x.per}`;
   box.innerHTML = `<a class="dlink" href="${guide}" data-nav aria-label="Open the ${g} field guide"><div class="dthumb${paint ? ' painted' : ''}">${thumb}</div>
     <div class="dtext"><h3>${g} ${ic('arrow')}</h3>
-      <p>${xk ? INSTEAD[xk].kind + ' · Not a dinosaur' : (GROUPS[grp]?.[0] || 'Dinosaur') + (fam ? ' · ' + fam : '')} · ${fmtMa(ea, la)}</p>
+      <p>${xk ? INSTEAD[xk].kind + ' · ' + xlabel(xk) : (GROUPS[grp]?.[0] || 'Dinosaur') + (fam ? ' · ' + fam : '')} · ${fmtMa(ea, la)}</p>
       <p>${n} fossil record${n > 1 ? 's' : ''} at ${S.length} site${S.length > 1 ? 's' : ''} · ${top.slice(0, 3).join(', ')}${top.length > 3 ? ` and ${top.length - 3} more ${top.length - 3 > 1 ? 'countries' : 'country'}` : ''}</p></div></a>
     <div class="dacts"><a class="chip primary" href="${guide}" data-nav>Field guide</a>${reset}</div>`;
   FOUND = {g, S, link};
@@ -665,12 +683,12 @@ function renderResults(){
 
   // Paleozoic: before the dinosaurs
   // Land animals lead, since they're the stars of the Paleozoic section.
-  const LAND = ['dimetrodon', 'edaphosaurus', 'eryops', 'diplocaulus'];
+  const SAIL = ['dimetrodon', 'edaphosaurus'], LAND = [...SAIL, 'gorgonopsid', 'eryops', 'diplocaulus', 'arthropleura', 'meganeura', 'tiktaalik'];
   const pal = xin.filter(([, v]) => v.per === 'pal').sort(([a], [b]) => LAND.includes(b) - LAND.includes(a));
   if (pal.length) {
-    const land = pal.some(([k]) => LAND.includes(k));
-    html += `<section class="era"><div class="erahead pal"><span class="eyebrow">Before the dinosaurs · Paleozoic</span><h2>${land ? 'The sail-backs and their neighbors' : 'Creatures of the ancient seas'}</h2>
-      <p>${land ? 'These animals lived here long before the first dinosaur. None of them are dinosaurs: Dimetrodon and its kin are synapsids, closer to mammals, and to you, than to T. rex.' : `Long before the dinosaurs, warm shallow seas covered this region. These animals left fossils ${data.near}.`}</p></div>
+    const sail = pal.some(([k]) => SAIL.includes(k)), land = pal.some(([k]) => LAND.includes(k));
+    html += `<section class="era"><div class="erahead pal"><span class="eyebrow">Before the dinosaurs · Paleozoic</span><h2>${sail ? 'The sail-backs and their neighbors' : land ? 'The first giants on land' : 'Creatures of the ancient seas'}</h2>
+      <p>${sail ? 'These animals lived here long before the first dinosaur. None of them are dinosaurs: Dimetrodon and its kin are synapsids, closer to mammals, and to you, than to T. rex.' : land ? `Long before the first dinosaur, giant bugs, amphibians and early relatives of mammals lived here. These animals left fossils ${data.near}.` : `Long before the dinosaurs, warm shallow seas covered this region. These animals left fossils ${data.near}.`}</p></div>
       <div class="xcards">${pal.map(([k, v]) => xcard(k, v, data)).join('')}</div></section>`;
   }
 
@@ -694,8 +712,14 @@ function renderResults(){
       <p>Fossil eggs are named by their shell structure, separately from the dinosaurs that laid them.</p>
       <div class="tracks">${data.e.map(([g,n,f]) => `<div class="track-chip"><b>${g}</b><span>${f[0] ? f[0] + ' Formation · ' : ''}${n} record${n>1?'s':''}</span></div>`).join('')}</div></div></section>`;
 
-  if (mx.length) html += `<section class="era"><div class="erahead meso"><span class="eyebrow">${data.d.length ? 'Also in the age of dinosaurs' : 'The age of dinosaurs · Mesozoic'}</span><h2>${pl.state === 'Kansas' ? 'Life in the inland sea' : 'Who swam and flew here'}</h2>
-    <p>While dinosaurs walked the land, these animals swam and flew over the seas that covered this region. None of them are dinosaurs.</p><div class="xcards">${mx.map(([k, v]) => xcard(k, v, data)).join('')}</div></section>`;
+  // Flying reptiles, crocodile cousins and sea creatures each get a section, the one with the most records first.
+  const kinds = [
+    [mx.filter(([k]) => FLYERS.includes(k)), 'Flying reptiles', 'Pterosaurs were the first animals with backbones to fly. They were cousins of the dinosaurs, not dinosaurs themselves.'],
+    [mx.filter(([k]) => CROCS.includes(k)), 'Crocodile cousins', 'Some of the biggest predators of their day were on the crocodile side of the reptile family tree. None of them are dinosaurs.'],
+    [mx.filter(([k]) => !FLYERS.includes(k) && !CROCS.includes(k)), pl.state === 'Kansas' ? 'Life in the inland sea' : 'Sea monsters', 'While dinosaurs walked the land, these animals swam in the seas that covered this region. None of them are dinosaurs.'],
+  ].filter(([list]) => list.length).sort(([a], [b]) => b.reduce((s, [, v]) => s + v.n, 0) - a.reduce((s, [, v]) => s + v.n, 0));
+  for (const [list, h2, p] of kinds) html += `<section class="era"><div class="erahead meso"><span class="eyebrow">${data.d.length ? 'Also in the age of dinosaurs' : 'The age of dinosaurs · Mesozoic'}</span><h2>${h2}</h2>
+    <p>${p}</p><div class="xcards">${list.map(([k, v]) => xcard(k, v, data)).join('')}</div></section>`;
 
   // Cenozoic: after the dinosaurs
   const cen = xin.filter(([, v]) => v.per === 'cen');
@@ -807,7 +831,7 @@ function renderX(){
   const era = PERIODS.find(p => p.id === v.per);
   app.innerHTML = `<div class="detail">
   <div class="d-top"><div class="crumbs"><button class="back" data-go="results">${ic('back')}Back to results</button><span>/ ${placeName(place)}</span></div><span class="eyebrow">Field guide</span></div>
-  <div class="d-head"><div><div class="row"><span class="tag ${v.per}">${v.tag}</span><span class="tag nodino">Not a dinosaur</span><span>${it.kind}</span></div>
+  <div class="d-head"><div><div class="row"><span class="tag ${v.per}">${v.tag}</span><span class="tag nodino">${xlabel(k)}</span><span>${it.kind}</span></div>
     <h1>${it.name}</h1><p class="sci">${sci}</p></div>
     <span class="rec">${ic('pin')}Recorded ${data.near.replace(/ of .*$/, '')}</span></div>
   <div class="d-grid">
