@@ -296,7 +296,8 @@ function renderHome(){
     <section class="findcard" aria-label="Start exploring">
       <div class="seg" role="tablist" aria-label="Search by">${[['place', 'pin', 'Place'], ['animal', 'search', 'Animal']].map(([m, i, t]) =>
         `<button role="tab" id="tab-${m}" aria-controls="pane-${m}" aria-selected="${homeMode === m}" data-mode="${m}">${ic(i)}${t}</button>`).join('')}</div>
-      <div class="pane" id="pane-animal" role="tabpanel" aria-labelledby="tab-animal"${homeMode === 'animal' ? '' : ' hidden'}>
+      <div class="panes">
+      <div class="pane" id="pane-animal" role="tabpanel" aria-labelledby="tab-animal"${homeMode === 'animal' ? '' : ' inert'}>
         <div class="fhead"><h2>${ic('search')}Find an animal</h2><p>Type any dinosaur or other prehistoric animal to see everywhere its fossils have been found.</p></div>
         <div class="zipopt"><label class="f" for="aq">Dinosaur or other prehistoric animal</label>
           ${searchBox('aq', 'e.g. Triceratops or Sarcosuchus')}
@@ -304,7 +305,7 @@ function renderHome(){
         <div class="popular"><span>Popular</span>${POPULAR.map(g => `<button class="chip" data-pick="${g}">${g}</button>`).join('')}</div>
         <button class="btn primary" id="aq-go">${ic('map')}Show on the map</button>
       </div>
-      <div class="pane" id="pane-place" role="tabpanel" aria-labelledby="tab-place"${homeMode === 'place' ? '' : ' hidden'}>
+      <div class="pane" id="pane-place" role="tabpanel" aria-labelledby="tab-place"${homeMode === 'place' ? '' : ' inert'}>
       <div class="fhead"><h2 id="find-h">${ic('pin')}Find your location</h2><p>Use your current location, or enter a US ZIP code or any place in the world.</p></div>
       <div class="opt"><button class="btn primary" id="gps">${ic('gps')}Use my location</button>
         <div class="hint">Uses GPS · Your browser will ask for permission</div><div id="gps-note" hidden></div></div>
@@ -313,6 +314,7 @@ function renderHome(){
         <div class="zipbox"><input class="zip" id="zip" autocomplete="off" enterkeyhint="search" placeholder="e.g. 80401 or Patagonia" value="${z}">${ic('pin')}</div>
         <div class="resolved" id="zip-out" aria-live="polite"></div>
         <button class="btn" id="find" disabled>${ic('arrow')}Find dinosaurs</button></div>
+      </div>
       </div>
     </section>
     <figure class="scene${SCENE.capTop ? ' cap-tr' : ''}">
@@ -398,7 +400,7 @@ function renderHome(){
   const tabs = [...document.querySelectorAll('.seg [role="tab"]')];
   const setMode = (m, focus) => {
     homeMode = m;
-    for (const t of tabs) { const on = t.dataset.mode === m; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; document.getElementById('pane-' + t.dataset.mode).hidden = !on; }
+    for (const t of tabs) { const on = t.dataset.mode === m; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; document.getElementById('pane-' + t.dataset.mode).inert = !on; }
     if (focus) document.getElementById(m === 'animal' ? 'aq' : 'zip').focus();
   };
   tabs.forEach(t => {
