@@ -36,7 +36,10 @@ FOSSIL = re.compile(r'dinosaur|\bdino\b|fossil|paleontolog|palaeontolog|jurassic
 JUNK = re.compile(r'jurassic world|jurassic park|movie|film|box office|trailer|toy|lego|halloween|costume|restaurant|'
                   r'theme park|ticket|crossword|wordle|video game|\bnfl\b|\bnba\b|stock|crypto', re.I)
 # Human evolution and archaeology are their own fields; the app is about the animals.
-HUMAN = re.compile(r'neanderthal|denisovan|hominin|homo (?:erectus|sapiens|naledi)|archaeolog|pyramid|pharaoh|roman|viking|stone age tool', re.I)
+HUMAN = re.compile(r'neanderthal|denisovan|hominin|homo (?:erectus|sapiens|naledi)|archaeolog|pyramid|pharaoh|roman|viking|stone age tool|'
+                   r'human (?:origins|evolution|ancestors?)|\bapes?\b|civili[sz]ation', re.I)
+# A summary can give away an archaeology story whose headline doesn't ("A mysterious 4,000-year-old wall...").
+DIGS = re.compile(r'archaeolog|civili[sz]ation', re.I)
 DINO_WORDS = re.compile(r'dinosaur|\bdino\b|theropod|sauropod|tyrannosaur|raptor\b|footprint|trackway|dinosaur egg|nest', re.I)
 
 # The featured non-dinosaurs, matched by what news stories call them. Group names only where the
@@ -252,8 +255,12 @@ def fetch(now):
 
 
 def words(t):
-    stop = set('a an the of in on at to for and or with from by is are was its it this that as new after how why what into over just than more most be has have'.split())
-    return {w for w in re.findall(r'[a-z0-9$.]+', t.lower()) if w not in stop and len(w) > 2}
+    stop = set('a an the of in on at to for and or with from by is are was its it this that as new after how why what into over just than more most be has have '
+               'about could would should may might can ago today now then later when where who which while her his their they them'.split())
+    # Short numbers count, and a span like "25 years" also becomes one word ("25yrs"); the "000" of "700,000" doesn't.
+    t = t.lower()
+    spans = {n + 'yrs' for n in re.findall(r'\b(\d{1,3}) (?:years?|yrs)\b', t)}
+    return spans | {w for w in re.findall(r'[a-z0-9$.]+', t) if w not in stop and (len(w) > 2 or w.isdigit()) and not w.startswith('0')}
 
 
 COMMON = set('dinosaur dinosaurs fossil fossils scientists paleontologists species skeleton million year years old ancient rare '
@@ -265,7 +272,8 @@ COMMON = set('dinosaur dinosaurs fossil fossils scientists paleontologists speci
              'rewrite rewrites rewriting reshape reshapes changes change incredible stunning amazing remarkable gamechanger '
              'game changer landmark breakthrough experts claims claim time ever '
              # Nor do the words every dinosaur story uses.
-             'fossilized fossilised predator predators predatory rex cousin relative identified possible near national park monument'.split())
+             'fossilized fossilised predator predators predatory rex cousin relative identified possible near national park monument '
+             'trace traces evidence remains history natural'.split())
 
 
 def names(title):
@@ -284,8 +292,12 @@ def days(a, b):
     return abs((datetime.fromisoformat(a[:19]) - datetime.fromisoformat(b[:19])).days)
 
 
-def same(a, w, n, b, wb, nb, odd=lambda word, when: False):
+def same(a, w, n, b, wb, nb, odd=lambda word, when: False, rare=lambda word: False):
     shared, key = w & wb, (w - COMMON) & (wb - COMMON)
+    # Two words that hardly any other headline uses ("drawer", "100"; "unconquered", "warrior") mark the same find,
+    # even when outlets pick it up weeks apart. A rare span counts twice: "25 years" in a handful of headlines.
+    if sum(rare(x) * (2 if x.endswith('yrs') and x[:-3].isdigit() else 1) for x in key) >= 2:
+        return True
     # Nearly the same headline, or mostly the same distinctive words. Common ones ("new dinosaur species identified") don't count.
     if len(shared) / max(1, len(w | wb)) >= 0.6 or (len(key) >= 2 and len(key) / max(1, len((w | wb) - COMMON)) >= 0.34) \
             or (len(shared) >= 3 and any(x.startswith('$') for x in shared)):
@@ -307,7 +319,8 @@ def group(articles):
     # Several headlines use the word within a few days, and at most one from further away.
     odd = lambda x, when: (sum(days(t, when) <= 2 for t in seen.get(x, ())) >= 4
                            and sum(days(t, when) > 3 for t in seen.get(x, ())) <= 1)
-    same_ = lambda *h: same(*h, odd=odd)
+    rare = lambda x: len(seen.get(x, ())) <= 5
+    same_ = lambda *h: same(*h, odd=odd, rare=rare)
     stories = []
     for a in sorted(articles, key=lambda a: a['published']):
         w, n = words(a['title']), names(a['title'])
@@ -361,7 +374,7 @@ def main():
     for a in fetch(now):
         by_id.setdefault(a['id'], a)
     articles = [a for a in by_id.values() if a['published'] >= cutoff and FOSSIL.search(a['title'] + ' ' + a['summary'])
-                and not JUNK.search(a['title']) and not HUMAN.search(a['title'])]
+                and not JUNK.search(a['title']) and not HUMAN.search(a['title']) and not DIGS.search(a['summary'])]
     articles.sort(key=lambda a: a['published'], reverse=True)
     stories = group(articles)
     json.dump(articles, open(RAW, 'w', encoding='utf-8'), ensure_ascii=False, indent=0)
