@@ -1,5 +1,59 @@
 [
 {
+"id": "594012cda406",
+"source": "Phys.org",
+"title": "Tiny animal populations can recover, challenging assumptions about extinction risk",
+"url": "https://phys.org/news/2026-11-tiny-animal-populations-recover-assumptions.html",
+"summary": "Species reduced to fewer than 50 individuals in the wild are not automatically doomed to extinction, according to a major study co-authored by researchers at the Zoological Society of London and Monash University.",
+"image": "https://scx1.b-cdn.net/csz/news/800a/2026/echo-parakeet.jpg",
+"published": "2026-11-05T17:20:01Z"
+},
+{
+"id": "d1ac616dbedc",
+"source": "조선일보",
+"title": "Industrial City Ulsan Emerges as Rare Dinosaur Fossil Hub",
+"url": "https://news.google.com/rss/articles/CBMiiAFBVV95cUxPcjJRWXlUUGFQWjdVU0N3bVUzNUhGSF9iSm1vNngzaENvMmsyOGdheXFtVWItYnhYMFRpUWJaOUtmZ0R1UjJqcTlucWZrZ1NvbWVSV3FRczN3YkpRY3pVaGRPSUp1NHBmZ0hLemVuTG5sUlpMUy10LU5YUVBoM0kzSl95d3lKSnh6?oc=5",
+"summary": "",
+"image": null,
+"published": "2026-11-05T17:04:16Z"
+},
+{
+"id": "3725e598ec56",
+"source": "Newsweek",
+"title": "Dinosaur Blood Discovered in 115-Million-Year-Old Fossil: Scientists",
+"url": "https://news.google.com/rss/articles/CBMilAFBVV95cUxOQU9IVTF6d0pFNWtsV1NnT0RmMVR4blZ6elRoRDlBYzc3QkhaRFlLUVA2SGJnbEppWUJVSXdjVEdUSmRxY1lROEx0U0tsaDZoOEhXdU4waUIzelYwOHFqTmNMR0d4ZHdrb1dVYkFfaXIxQ05GQTh2OUo4UG4wUlI0NWNLQUc4MVZIcmpIYk1YSS1iclVi?oc=5",
+"summary": "",
+"image": null,
+"published": "2026-11-05T17:04:00Z"
+},
+{
+"id": "de3a626efb2c",
+"source": "Phys.org",
+"title": "A 70-million-year-old genetic rescue allowed codfishes to escape extinction and shape the North Atlantic",
+"url": "https://phys.org/news/2026-11-million-year-genetic-codfishes-extinction.html",
+"summary": "A new study has revealed how the repurposing of an ancestral gene saved the embryos of cod's ancestors from extinction, enabling them to form the large populations that, millions of years later, would change the course of human history. The codfishes and their relatives in the…",
+"image": "https://scx1.b-cdn.net/csz/news/800a/2026/a-70-million-year-old.jpg",
+"published": "2026-11-05T16:20:27Z"
+},
+{
+"id": "afc5e0f4b2e3",
+"source": "geekspin",
+"title": "Scientists cracked open a dinosaur bone and found red blood",
+"url": "https://news.google.com/rss/articles/CBMiakFVX3lxTE5XMXR2LUpkRGpRYjJvTTBISG9idEQwbk1sTGc4NXhEOHFXczBuazIzSXVralN0eDF0a0VCVEhsV2lrXzdPanlmOG5wM1QwMWY3VW5RSkttY3Fadmh4QVBRczlNUWpuTlhDa1E?oc=5",
+"summary": "",
+"image": null,
+"published": "2026-11-05T12:00:18Z"
+},
+{
+"id": "6b11ca2b21f5",
+"source": "Phys.org",
+"title": "Prehistoric 'giant rat' found in Thailand from fossil teeth",
+"url": "https://phys.org/news/2026-11-prehistoric-giant-rat-thailand-fossil.html",
+"summary": "A giant rodent weighing around 30 kilograms (66 pounds) roamed what is now southern Thailand 33 to 35 million years ago, scientists said, after identifying a previously unknown species from two fossilized teeth.",
+"image": "https://scx1.b-cdn.net/csz/news/800a/2026/prehistoric-giant-rat.jpg",
+"published": "2026-11-05T09:11:03Z"
+},
+{
 "id": "f29645fcd9c9",
 "source": "The Scientist",
 "title": "Dinosaur Fossil Preserves Chemical Traces of Blood",
@@ -531,6 +585,15 @@
 "published": "2026-11-02T21:01:07Z"
 },
 {
+"id": "067a7b9c6d8b",
+"source": "Science | AAAS",
+"title": "Did scientists just find 115-million-year-old dinosaur blood?",
+"url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxQbW9YWVVGeUh5ZTBGa21NaWdiTUp3TnVmODBhN0R3T0FKaEVpRDZaZWYxSHBQS0x5STNDOTZTZ1dxSzZrOThUcjVfZkNVRnJNSHlzeHFzekVIYXdqaU0xaXNvY1NINUE5V3pTRGxKd1VqN3plNE9uQW9fbzNJZXdNV2duSUZ3Q1I5ckV4M3l1MUhqTU9jY0JSWGFQRDhDNWpoR2c?oc=5",
+"summary": "",
+"image": null,
+"published": "2026-11-02T20:50:00Z"
+},
+{
 "id": "2107330d1d75",
 "source": "Mirage News",
 "title": "Dinosaur Blood Find Reshapes Fossil Science",
@@ -799,6 +862,15 @@
 "summary": "",
 "image": null,
 "published": "2026-11-02T13:24:36Z"
+},
+{
+"id": "aca541070339",
+"source": "The Salt Lake Tribune",
+"title": "Why Grand County holds a rare chapter of North America’s dinosaur history",
+"url": "https://news.google.com/rss/articles/CBMifkFVX3lxTE1VblhEa2NLeXlZU3g1RkxaX3NWWndBOWFYeGpvVGw0T2pidGFVaGlLd0IydWpWTURwMEZOMFo3cHZMTEpqM3VEMXNlVDc3eGZJelE0UGlValZiMnlSUmdyRzR6OV9aMFZFTXA0a01wa21CWlBnTXBuWDNVTDNaUQ?oc=5",
+"summary": "",
+"image": null,
+"published": "2026-11-02T13:11:08Z"
 },
 {
 "id": "2ef4654e54b3",
