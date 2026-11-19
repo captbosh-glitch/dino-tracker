@@ -1,5 +1,32 @@
 [
 {
+"id": "8b988991748a",
+"source": "ScienceDaily",
+"title": "This 6-million-year-old whale may have had the most crooked face in mammal history",
+"url": "https://www.sciencedaily.com/releases/2026/11/261118065528.htm",
+"summary": "A bizarre whale that lived roughly 6 million years ago had a face so dramatically crooked that scientists believe it may have been the most asymmetrical of any mammal. Discovered in Peru, the extinct pygmy sperm whale Scaphokogia huachafo had an enormous downward-curving snout…",
+"image": null,
+"published": "2026-11-19T10:59:55Z"
+},
+{
+"id": "18b3b856426b",
+"source": "Bioengineer.org",
+"title": "First Early Cretaceous Hadrosauroid Dinosaur Discovered in China’s Erlian Basin",
+"url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxPMEotelI4ZThXMlpDZXpjUk9lRGdUcHNGQ2JGTkg0bFhFLXFpai1GZl9NWFpTN0dxRVh3YjktSjdRMFc5Y3Ntbnc1WHkyRC1RV3Iwb3pJeXdlRl9YTFd6cWVJV3RlTTJpZGlzUkFtWFlIblJjazh5MGdycXkyTGM4bHg0U2FEOGFzaHBLcEFJelhXNnkwdllvZjhKQ3RlSm1xa3F6clFR?oc=5",
+"summary": "",
+"image": null,
+"published": "2026-11-19T10:35:01Z"
+},
+{
+"id": "271d30cd1b1b",
+"source": "FOX Weather",
+"title": "Ancient dinosaur fossil reveals surprising discovery that has been buried for more than 115 million years",
+"url": "https://news.google.com/rss/articles/CBMilwFBVV95cUxQbFMyZy0zMEU5TWNkWnlHWUdGU0JFbVJONTVrN1c2UmMtMlA4WjNBOXlPTXRWbFFHV3RWOHdhZ0pMY1ZLNTU4UzlpelBBU09mS3Z3Q21ZQ1lvVGFUX1U2Uk16NUFkTlljMDR3UVRxVktmc3R0ay1xLVNmMHF2MzZOS2JETGRRazBMazd6LVBPX0tMR2RzckZB0gGcAUFVX3lxTE5UV1pyUUFlLWNQSGRSaV9LX3lsakFsNVBkRkxtWGd2cGtaaDhJSXgwVnhUSjRCTTZjb2p6SlRoTVRpNmlSQktZVnRhN3VWaFRZNWdJWjQyanBRSFNHOXF4c3haV2xVV0VRUElwaWVwamlUZVRfR0dSSDlPMVlfQWF1Y2lXcFAzTkhVRkVCRk92Mjc3b21COWF6TkxVOA?oc=5",
+"summary": "",
+"image": null,
+"published": "2026-11-19T02:44:00Z"
+},
+{
 "id": "2f38acd79692",
 "source": "Phys.org",
 "title": "A 115 million‑year‑old 'algae rebellion' in Portugal's sea cliffs pushes back evolutionary timeline",
@@ -27,6 +54,15 @@
 "published": "2026-11-18T23:25:36Z"
 },
 {
+"id": "6a992e18bccb",
+"source": "ScienceDaily",
+"title": "This strange creature lived 309 million years ago, long before the dinosaurs",
+"url": "https://www.sciencedaily.com/releases/2026/11/261117033928.htm",
+"summary": "More than 300 million years ago, long before dinosaurs roamed Earth, the Chicago area was a steamy, swampy landscape teeming with bizarre creatures. Now, scientists at the Field Museum have identified a previously unrecognized species of ancient amphibian ancestor, revealing new…",
+"image": null,
+"published": "2026-11-18T23:24:05Z"
+},
+{
 "id": "bb09de208d01",
 "source": "90.5 WESA",
 "title": "New dinosaur fossils, $5 million given to Pittsburgh's Carnegie Museums",
@@ -52,6 +88,15 @@
 "summary": "",
 "image": null,
 "published": "2026-11-18T18:26:25Z"
+},
+{
+"id": "ee70bcb6d920",
+"source": "Pittsburgh Magazine",
+"title": "Three New Dinosaurs Will Soon Be On Display in Pittsburgh",
+"url": "https://news.google.com/rss/articles/CBMikwFBVV95cUxPTGpMa3FTbUgxVWtqOUtPRG9LRXVNVzhLWlBISTU3T1lod1UyZExlVzYyZGEyc2UzUjVNMF9aZWNrQkRVc0VTZ1ducDRJd3JsUjFxcjdBRUQ1eG1SUXpEOHNYU084eGhqNDRpcTZZSVdrY0ptN2VLeHNOR01SdWxwZ1NMRVhUX2JmTTlXVlFqU3ZNVzg?oc=5",
+"summary": "",
+"image": null,
+"published": "2026-11-18T16:58:12Z"
 },
 {
 "id": "70eaf9454563",
@@ -3679,14 +3724,5 @@
 "summary": "Scientists have identified the “fattest” belemnite ever discovered, a bizarre, barrel-shaped squid relative that lived in Wyoming’s ancient seas 160 million years ago. The exceptionally rare fossils reveal a creature unlike anything previously known, potentially a predator of…",
 "image": null,
 "published": "2026-10-20T12:20:44Z"
-},
-{
-"id": "aec0ce464b63",
-"source": "Indy's Child Magazine",
-"title": "Real Fossils and Real Experts at The Children’s Museum",
-"url": "https://news.google.com/rss/articles/CBMibEFVX3lxTE1MTHhyaS1kNV9NZnVmUTVjb3AzN19pWlBwdDBzUFZEVFpnWEM0ZkpzRHhkTE1Qb1VVeENPYmR1ck94WERrbkpSV0JJLUxYMVlHRkEtek9qSWpFU3B5MnJ2Z3Nwel9NU2IwQWhBeg?oc=5",
-"summary": "",
-"image": null,
-"published": "2026-10-20T07:00:00Z"
 }
 ]
